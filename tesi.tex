@@ -5,43 +5,18 @@
                                         %   documento fronteretro
                                         %report: stile tesi (oppure book)
 \documentclass[12pt,a4paper,openright,twoside]{report}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%libreria per scrivere in italiano
-\usepackage[italian]{babel}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%libreria per accettare i caratteri
-                                        %   digitati da tastiera come è à
-                                        %   si può usare anche
-                                        %   \usepackage[T1]{fontenc}
-                                        %   però con questa libreria
-                                        %   il tempo di compilazione
-                                        %   aumenta
+%\usepackage[english]{babel}
+\usepackage[english]{babel}
 \usepackage[latin1]{inputenc}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%libreria per impostare il documento
 \usepackage{fancyhdr}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%libreria per avere l'indentazione
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   all'inizio dei capitoli, ...
 \usepackage{indentfirst}
-%
-%%%%%%%%%libreria per mostrare le etichette
-%\usepackage{showkeys}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%libreria per inserire grafici
 \usepackage{graphicx}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%libreria per utilizzare font
-                                        %   particolari ad esempio
-                                        %   \textsc{}
 \usepackage{newlfont}
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%librerie matematiche
 \usepackage{amssymb}
 \usepackage{amsmath}
 \usepackage{latexsym}
 \usepackage{amsthm}
-%
+
 \oddsidemargin=30pt \evensidemargin=20pt%impostano i margini
 \hyphenation{sil-la-ba-zio-ne pa-ren-te-si}%serve per la sillabazione: tra parentesi 
 					   %vanno inserite come nell'esempio le parole 
@@ -77,22 +52,61 @@ Questa \`e la \textsc{Dedica}:\\
 ognuno pu\`o scrivere quello che vuole, \\
 anche nulla \ldots                      %\ldots lascia tre puntini
 \newpage                                %va in una pagina nuova
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 \clearpage{\pagestyle{empty}\cleardoublepage}%non numera l'ultima pagina sinistra
 \end{titlepage}
 \pagenumbering{roman}                   %serve per mettere i numeri romani
-\chapter*{Introduzione}                 %crea l'introduzione (un capitolo
+\chapter*{Abstract}                 %crea l'introduzione (un capitolo
                                         %   non numerato)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%imposta l'intestazione di pagina
 \rhead[\fancyplain{}{\bfseries
-INTRODUZIONE}]{\fancyplain{}{\bfseries\thepage}}
+Abstract}]{\fancyplain{}{\bfseries\thepage}}
 \lhead[\fancyplain{}{\bfseries\thepage}]{\fancyplain{}{\bfseries
-INTRODUZIONE}}
+Abstract}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%aggiunge la voce Introduzione
                                         %   nell'indice
-\addcontentsline{toc}{chapter}{Introduzione}
-Questa \`e l'introduzione.
+The course of Operative Systems is arguably one of the most crucial part of 
+a computer science course. While it is safe to say a small minority of students
+will ever face the challenge to develop software below the OS level, the 
+understanding of its principles is paramount in the formation of a proper computer
+scientist.
+The theory behind operative systems is not a particularly complex topic. Ideas 
+like process scheduling, execution levels and resource semaphores are intuitively
+grasped by students; yet mastering these notions thorugh abstract study alone
+will prove tedious if not impossible. 
+
+Devising a practical - albeit simplified - implementation of said notions can
+go a long way in helping students to really understand the underlying workflow
+of the processor as a whole in all its nuances. 
+
+Developing a proof-of-concept OS, however, is not as simple as creating software for
+an already existing one. The complexity of real-world hardware
+ goes way beyond what students are required to learn, which makes hard to
+ find a proper machine architecture to run the project on.
+
+This work is heavily inspired by uMPS2 (and uARM), a previous solution to this problem:
+ an emulator for the MPIS R3000 processor. By working on a virtual and simplified
+ version of the harware many of the unnecessary tangles are stripped away while
+ still mantaining the core concepts of OS development.
+Although inspired by a real architecture (MIPS), uMPS2 is still an abstract 
+environment; this allows the students' work to be controlled and directed,
+ but might leave some of them with a feeling of detachment from reality
+ (as was the case for the author).
+
+What is argued in this thesis is that a similar project can be developed
+on real hardware without becoming too complicated. The designed architecture
+is ARMv8, more modern and widespread, in the form of the Raspberry Pi education
+board.
+
+The result of this work is dual: on one side there was a thorough study on
+how to develop a basic OS on the Raspberry Pi 3, a knowledge that is
+as of now not properly documented for those not prepared on the topic; using
+this knowledge an hardware abstraction layer has been developed for 
+initialization and usage of various harware peripherals, allowing users
+to buid a toy OS on top of it.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%non numera l'ultima pagina sinistra
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \tableofcontents                        %crea l'indice
@@ -108,13 +122,31 @@ INDICE}}
 \listoftables                           %crea l'elenco delle tabelle
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%non numera l'ultima pagina sinistra
 \clearpage{\pagestyle{empty}\cleardoublepage}
-\chapter{Primo Capitolo}                %crea il capitolo
+\chapter{Introduction}                %crea il capitolo
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%imposta l'intestazione di pagina
 \lhead[\fancyplain{}{\bfseries\thepage}]{\fancyplain{}{\bfseries\rightmark}}
 \pagenumbering{arabic}                  %mette i numeri arabi
 Questo \`e il primo capitolo.
-\section{Prima Sezione}                 %crea la sezione
-Questa \`e la prima sezione.
+\section{Background}
+An operative system is, in a nutshell, a very complex and sophisticated program
+that manages the resources of its host machine. Proper studying on the topic 
+should yield higher understanding on many fields of the likes of
+parallel programming, concurrency, data structures, security and 
+code management in general.
+
+As previously mentioned, an Operating Systems course should ideally include
+field work. This can be done through several different approaches.
+
+One option is to use an already existing OS as reference while studying 
+its operating principles. 
+
+
+ ...
+
+Just for the sake of understanding, exercises can be made without resorting
+to specific hardware or emulator. A scheduling algorithm can be implemented
+for threads or processes in a userspace program, along with concurrency and semaphore
+control.
 
 Ora vediamo un elenco numerato:         %crea un elenco numerato
 \begin{enumerate}
