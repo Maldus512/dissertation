@@ -21,7 +21,8 @@
 \hyphenation{sil-la-ba-zio-ne pa-ren-te-si}%serve per la sillabazione: tra parentesi 
 					   %vanno inserite come nell'esempio le parole 
 %					   %che latex non riesce a tagliare nel modo giusto andando a capo.
-%
+
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%comandi per l'impostazione
                                         %   della pagina, vedi il manuale
                                         %   della libreria fancyhdr
@@ -32,7 +33,7 @@
 \rhead[\fancyplain{}{\bfseries\leftmark}]{\fancyplain{}{\bfseries\thepage}}
 \cfoot{}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\linespread{1.3}                        %comando per impostare l'interlinea
+\linespread{1} % era 1.3                %comando per impostare l'interlinea
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%definisce nuovi comandi
 %
 \begin{document}
@@ -137,16 +138,67 @@ code management in general.
 As previously mentioned, an Operating Systems course should ideally include
 field work. This can be done through several different approaches.
 
+[Mention JaeOS, KayaOS, uARM, uMPS articles]
 One option is to use an already existing OS as reference while studying 
 its operating principles. 
+...
 
+\subsection{Shortcomings of $\mu$MPS}
+Every learning project must find a balance between abstraction and concreteness.
+Developing a real world application with value outside of the academic context
+ brings the most satisfaction to the scholar; frequently, however, an entirely
+ practical assignment would lose a lot of learning value due to hindrances
+ spanning outside of the course program.
+ 
+In the frame of this work said hindrances would be the complexities tied to
+hardware architecture of peripherals and CPU that, although interesting
+int their own right, are unnecessary for the students' formation process.
+The $\mu$MPS emulator provides an environment fairly similar to real hardware
+while still being approchable for an undergraduate student; it positions itself
+in a sweet spot between abstraction and concreteness, allowing just enough
+of the underlying hardware to pass through and keeping the focus on 
+theoretical topics like memory management, scheduling and concurrency.
 
- ...
+After successfully concluding his or her work on $\mu$MPS the student has
+a firm grasp on said topics and has grown significantly in the ability to
+manage large and complex projects. There can be, however, a lingering confusion
+on the attained result, which is limited to a relatively small niche.
+The software itself may be compiled for a real architecture, but the final binary
+can only run on the simplified emulator, making it a trial for its own sake.
 
-Just for the sake of understanding, exercises can be made without resorting
-to specific hardware or emulator. A scheduling algorithm can be implemented
-for threads or processes in a userspace program, along with concurrency and semaphore
-control.
+The final end of $\mu$MPS is, in fact, learning, so this is not really a shortcoming.
+What is attemped with this work is to take a small step towards concreteness in 
+the aforementioned balance without falling into a pit of unnecessary complexity.
+The occasion to do so is presented by the rise of a widespread and relatively
+simple architecture: ARMv8
+
+\subsection{ARMv8 and Raspberry Pi}
+The passage from MIPSEL to ARM is not new to $\mu$MPS; the previous work
+of $\mu$ARM was already pointed in this direction. $\mu$ARM had the goal to
+modernize the $\mu$MPS experience, thus maintaing its emulator-only approach.
+In fact, when this work started the goal was to create an harware abstraction
+layer to be able to run an $\mu$ARM project on Raspberry Pi (which 
+coincidentally has an ARMv7 core for the model 2).
+<mipsel is outdated>
+The ARMv8 architecture choice fixes most of the problems that previously arose while
+considering real harware as an environment:
+\begin{itemize}
+    \item \textbf{Widespread use}: the success of the ARM architecture in general
+            make it an interesting candidate for an undergraduate project; specifically,
+            it is used by the whole Raspberry Pi family of educational boards, which
+            needs no introduction. Today, one can reasonably assume that an undergraduate
+            student will know what a Raspberry Pi is at least by the end of his or her
+            course of study.
+    \item \textbf{Simplicity}: it will be argued over the dissertation that the
+            64-bit ARMv8 architecture is fairly simple compared to its predecessors,
+            thus making it suitable even for a software-focused study.
+    \item \textbf{Future prospect}: More and more devices are running on ARM.
+            The smartphone market is almost entirely dominated by the family of
+            processors, which is now expanding into notebooks and other handheld/
+            wearable/portable devices.
+            Having an - albeit small - experience in the field can prove useful
+            for some students.
+\end{itemize}
 
 Ora vediamo un elenco numerato:         %crea un elenco numerato
 \begin{enumerate}
@@ -157,7 +209,7 @@ Ora vediamo un elenco numerato:         %crea un elenco numerato
 \end{enumerate}
 
 \begin{figure}[h]                       %crea l'ambiente figura; [h] sta
-                                        %   per here, cioè la figura va qui
+                                        %   per here, cioe' la figura va qui
 \begin{center}                          %centra nel mezzo della pagina
                                         %   la figura
 %\includegraphics[width=5cm]{figura.eps}%inserisce una figura larga 5cm
@@ -216,8 +268,8 @@ $(3,1)$ & $(3,2)$ & $(3,3)$\\
 \begin{verbatim}
         In questo ambiente     posso scrivere      come voglio,
 lasciare gli spazi che voglio e non % commentare quando voglio
-e ci sarà scritto tutto.
-Quando lo uso è meglio che disattivi il Wrap del WinEdt
+e ci sarï¿½ scritto tutto.
+Quando lo uso ï¿½ meglio che disattivi il Wrap del WinEdt
 \end{verbatim}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%non numera l'ultima pagina sinistra
 \clearpage{\pagestyle{empty}\cleardoublepage}
@@ -233,14 +285,14 @@ CONCLUSIONI}}
 \addcontentsline{toc}{chapter}{Conclusioni} Queste sono le
 conclusioni.\\
 In queste conclusioni voglio fare un riferimento alla
-bibliografia: questo \`e il mio riferimento \cite{K3,K4}.
+bibliografia: questo \`e il mio riferimento %\cite{K3,K4}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%imposta l'intestazione di pagina
 \renewcommand{\chaptermark}[1]{\markright{\thechapter \ #1}{}}
 \lhead[\fancyplain{}{\bfseries\thepage}]{\fancyplain{}{\bfseries\rightmark}}
 \appendix                               %imposta le appendici
 \chapter{Prima Appendice}               %crea l'appendice
 In questa Appendice non si \`e utilizzato il comando:\\
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\verb"" è equivalente all'
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\verb"" ï¿½ equivalente all'
                                         %   ambiente verbatim,
                                         %   ma si utilizza all'interno
                                         %   di un discorso.
