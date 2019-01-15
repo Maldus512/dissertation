@@ -17,6 +17,7 @@
 \usepackage{latexsym}
 \usepackage{amsthm}
 \usepackage{hyperref}
+\usepackage{listings}
 
 \oddsidemargin=30pt \evensidemargin=20pt%impostano i margini
 \hyphenation{sil-la-ba-zio-ne pa-ren-te-si}%serve per la sillabazione: tra parentesi 
@@ -168,14 +169,36 @@ parallel programming, concurrency, data structures, security and
 code management in general.
 
 As previously mentioned, an Operating Systems course should ideally include
-field work. This can be done through several different approaches.
+field work. This can be done through several different approaches, which
+have already been covered by previous works like $\mu$ARM and $\mu$MPS
+\cite{tesijonjic} \cite{tesimelletti}.
+To quickly recap the most notable mentions:
+\begin{description}
+    \item[Study of an existing OS] the most theoretical approach, it involves
+        reading and analyzing the source code. There is no short supply of such
+        examples; historically Minix is cited \cite{minix}, but a quick research
+        will reveal countless small kernels for embedded platforms and emulators.
+        The biggest downside to this approach is that the esamination of the source
+        code may end up not having more educational value than a pseudocode snippet
+        found in the textbook. The fact that the example is indeed practical is 
+        lost in the lack of application by the student.
+    \item[Modification of an existing OS] this approach can be seen as a slight
+        revision to the study-only policy. If the work under examination can indeed
+        be run in some environment, students might find themselves modifying small
+        parts even if unprompted by the professor.
+    \item[Construction from scratch] this is the idea behind projects $\mu$MPS, 
+        $\mu$MPS2, $\mu$ARM and the KayaOS specification \cite{davolimorsiani}.
+\end{description}
 
-[Mention JaeOS, KayaOS, uARM, uMPS articles]
-One option is to use an already existing OS as reference while studying 
-its operating principles. 
-...
+It is argued that the last approach is the most interesting and valuable for 
+the students. If they are to study an existing Operative System at all, it is
+either the case that said OS would be too complex or simple enough for them 
+to implement. In the first scenario the studying program must skip the most cumbersome
+parts and only cover what is essential, in which case the completeness 
+of the example loses meaning. In the latter there is no reason not to follow 
+the constructionist route and let the disciples create their own OS.
 
-\subsection{Shortcomings of $\mu$MPS}
+\subsection{$\mu$MPS and Similar Emulators}
 Every learning project must find a balance between abstraction and concreteness.
 Developing a real world application with value outside of the academic context
  brings the most satisfaction to the scholar; frequently, however, an entirely
@@ -335,7 +358,7 @@ in favor of the latter. As mentioned before, the work began as an attempt to
 silently port kernels compiled for the $\mu$ARM emulator to real hardware to 
 provide students with a better sense of accomplishment.
 
-\section{Raspberry Pi 2 (arm32)}
+\section{Raspberry Pi 2 (ARM32)}
 The first \textit{Soc} to be experimented on was the Raspberry pi 2 (model B).
  The initial idea was to replicate as closely as possible the
 $\mu$ARM experience, which runs on an emulated ARM7TDMI; although the RPi2 
@@ -376,7 +399,7 @@ With the new goal in mind there were two main issues with the Raspberry Pi 2:
 \end{enumerate}
 
 
-\section{Raspberry Pi Zero (arm32)}
+\section{Raspberry Pi Zero (ARM32)}
 The model Zero was the second option to be considered for this work. It is 
 significantly cheaper (with prices as low as 5\$ for the no-wireless version)
 and compact. It runs on a single core ARM1176JZF-S, not too different from
@@ -400,7 +423,7 @@ USB to serial converter connected to the GPIOs.
 This, along with the lack of usable debugging tools, lead yet again to look for
 a better option.
 
-\section{Rasbperry Pi 3 (arm64)}
+\section{Rasbperry Pi 3 (ARM64)}
 The final choice was the Raspberry Pi 3 (any model, in theory). Though sharing
 some of the shortcomings of previously considered alternatives like lack of 
 peripherals and a difficult development cycle, it offered a significant advantage:
@@ -485,6 +508,7 @@ file (if present) and loads its parameters starting at address 0x100.
 
  \begin{figure}[t]
  \includegraphics[scale=0.6234]{tesi1.png}
+ \caption[Figure 1]{Explanatory diagram on BMC2837 boot sequence}\label{fig:prima}
  \end{figure}
  \clearpage
 %TODO: add a diagram
@@ -521,6 +545,11 @@ as simple as possible and since the base behaviour never presented any issue.
 Of all the available options, only the following two were ever considered 
 (but still never implemented).
 
+\subsubsection{Architecture}
+The Cortex A-53 can run both ARM32 and ARM64 code; the choice is dictated by the
+name of the kernel image: {\tt kernel8.img} makes the CPU start in AArch64 mode,
+while {\tt kernel7.img} would start in AArch32.
+
 \subsubsection{Kernel Loading Address}
 The GPU loads the kernel image starting at address 0x80000 in RAM for the
 Raspberry Pi 3. By adding a config.txt file to the microSD card and using
@@ -548,6 +577,60 @@ a reserved memory partition of 64MiB is more than sufficient.
 It could be in fact reduced further to 16MiB, but as for the kernel load address 
 adding the config.txt file was judged unneded effort on the user's side.
 
+\section{Videocore IV}
+After the control is passed to the ARM CPU it is never returned to the GPU.
+The graphical processor however still has responsibility over some peripherals
+and can carry on work under specific requests. The mean of communication 
+between the two processing units is the shared RAM memory (and part of the interrupt
+controller), specifically under the Mailbox interface.
+
+\subsubsection{Mailboxes}
+Mailboxes are the primary means of communication between the ARM and the 
+Videocore firmware running on the GPU. A mailbox is nothing but a memory address
+with special access modes tied to an interrupt signal for the receiving end.
+Mailboxes consist of several 32 bit registers providing status information, read
+and write access. If a value is written on right the memory location and the
+mailbox is ready to accept data, an interrupt will be fired and the receiver
+will have the chance to read the message and act accordingly. The data is 
+usually another memory location, containing more elaborate commands and parameters.
+
+Regarding the CPU-to-GPU mailbox, additional care must be taken to check whether
+the mailbox is full or empty by inspecting the two most significant bits of 
+the status register.
+
+The data address to be written on the mailbox must be 16 bytes aligned in memory,
+as the lowest 4 bits must be overwritten with the so called mailbox channel
+number, a parameter detailing the nature of the request. As of time of writing
+only two channels are defined: channel 8 for requests from ARM to the Videocore
+and channel 9 for requests from the Videocore to the ARM. Apparently, channel 9
+exists but has no definied behaviour.
+
+The buffer whose address is written on the mailbox must contain properly structured
+data for specific requests. Some of the possible commands from the ARM to the
+Videocore include:
+\begin{itemize}
+    \item Get Broadcom firmware revision number.
+    \item Get board model and revision number.
+    \item Get board MAC address.
+    \item Get current CPU-GPU memory split.
+    \item Get or set power state for all the devices on the board.
+    \item Get or set clock state for all the devices on the board.
+    \item Get on board temperature readings.
+    \item Control special GPIOs, like the on board activity led.
+    \item Execute code on the Videocore.
+    \item Require and manage a framebuffer to be displayed over the HDMI.
+\end{itemize}
+
+\subsubsection{Framebuffer}
+The HDMI controller is managed entirely by the GPU, and the ARM core has no 
+way to interact with it directly. Instead, it can ask through the mailbox
+property channel for the Videocore to set up a framebuffer in its own memory
+share and directly access it. The Videocore will then proceed to continously flush the
+framebuffer's contents on the screen.
+This is a very convenient design choice, removing a great deal of effor from
+the OS developer to see output displayed on screen.
+
+
 \section{Peripherals}
 What follows is a list of all the peripherals used in the project with the core
 functioning (registers and command codes) explained for each of them.
@@ -556,6 +639,8 @@ their registers and buses are mapped in RAM starting from address 0x3F000000,
 as if the main memory of the system extended beyond 1GiB.
 
 \subsection{GPIO}
+
+\subsection{External Mass Media Controller}
 
 \subsection{UART Serial Interface}
 There are two UART serial peripherals on board of the BCM2837: UART0 and UART1.
@@ -568,15 +653,28 @@ Even if this is undoubtedly a limitation it can pose an interesting
 concurrency programming challenge for a student, as both can run successfully if 
 properly alternated.
 
+Those devices bear a strong similarity to $\mu$MPS' terminal devices, both having 
+similar registers to check the current status and read or write character on the
+interface. For this reason, except for the initialization of the peripheral
+which is done entirely by the harware abstraction layer, they are left essentially
+ untouched to be managed by students approaching the project. In comparison to 
+ the emulated devices the only real difficulty lies in a less organized register
+ structure, having about four registers scattered over a larger memory area instead
+ of a compact structure; after providing a focused and complete documentation of 
+ said registers, this complication should be easily overcome.
+
  \begin{figure}[t]
  \includegraphics[scale=0.143]{tesi2.jpg}
+ \caption[Figure 2]{Highlight of UART reserved GPIOs}\label{fig:seconda}
  \end{figure}
 
 \subsubsection{UART0}
 The UART0 is a fully fledged asynchronous serial interface, abiding to the 
-PL011 ARM specification \cite{pl011}.
+PL011 ARM specification \cite{pl011}. To properly run on real hardware, the
+corresponding pins must be configured to use the alternate function number 0 with
+no internal pull up or down.
 Its register are located starting at the address 0x3F201000, each of them
-is 32 bits wide and they are organized as follows:
+is 32 bits wide and they are organized as follows (some unimportant ones are omitted for brevity):
 \begin{description}
     \item[Data:] this register contains the first character present in 
             the receive FIFO and can be written to send an outgoing character to 
@@ -597,7 +695,7 @@ is 32 bits wide and they are organized as follows:
             for enabling and disabling the whole device.
     \item[IFLS:] interrupt FIFO level selection register. It is used to establish 
             at which percentage each FIFO (transmit or receive) triggers the
-            corrisponding interrupt. Possible values range from 1/8 to 7/8.
+            corresponding interrupt. Possible values range from 1/8 to 7/8.
     \item[Interrupt mask:] allows to mask specific interrupts tied to the peripheral,
             such as those fired on reception and transmission of a character
     \item[Raw interrupt:] read only register updated with currently pending
@@ -612,31 +710,270 @@ data, flag, interrupt mask, masked interrupt and interrupt clear. All the others
 are used for the initialization of the peripheral, which is handled by the 
 hardware abstraction layer and should not be changed.
 
-The serial interface is configured as 8-bit wide with no parity bit and with
-a baudrate of 115200.
+The serial interface is configured as 8 bit wide, no parity bit and with
+a baudrate of 115200. The FIFOs are disabled for simplicity, so they act like 
+a one character deep buffer.
 
+\subsubsection{UART1 or Mini UART}
+The UART1 is part of the group of auxiliary peripherals, together with two SPI
+interfaces. In comparison with UART0 it has much more restricted functionality,
+but still enough for a simple educational project. For example, it does not 
+provide framing error detection or parity bit management, features that are either
+disabled or ignored even in its more complete counterpart.
+To properly run on real harware, the corresponding pins must be set to use the
+alternate function number 5 with no internal pull up or down.
+Its registers are located starting at the address 0x3F215040, each of them is 32 bits
+wide and they are organized as follows (some unimportant ones are omitted for brevity):
 
-\clearpage{\pagestyle{empty}\cleardoublepage}
-\chapter{Operating System Facilities}
+\begin{description}
+    \item[IO:] reading from this register yield the first character present in the
+            receive FIFO, while writing it inserts the data into the write FIFO.
+    \item[IIR:] register for enabling receive and transmit interrupts. If the first
+            bit is set an interrupt line is asserted whenever the transmission FIFO
+            is empty; if the second bit is set an interrupt line is asserted whenever
+            the reception FIFO is not empty.
+    \item[IER:] register holding information about which interrupt is pending (if any).
+    \item[LCR:] controls whether the Mini UART works in 8 bit or 7 bit mode.
+    \item[LSR:] line control status; used to determine if the device is ready to 
+            accept new data or if there are received characters to be read.
+    \item[CNTL:] control register to enable (in a separate fashion if so requested)
+            the receive and trasmit lines.
+    \item[BAUD:] 16 bit baudrate counter, to be set directly to the desired value.
+\end{description}
+Again, since the abstraction layer takes care of the initialization procedure
+the user should really care about four registers: IO, IIR, IER and LSR.
+The serial configuration is the same as the UART0.
+
+\section{Interrupt Controller}
+The BCM2837 SoC has at least two devices acting as interrupt controllers. One of 
+them is clearly defined in the peripheral datasheet \cite{bcm2835}, while the
+other is not clearly named but hinted at thorugh register definition in a later 
+revision \cite{rev3.4}. Those are here arbitrarely named Base Interrupt Controller (BIC)
+and Generic Interrupt Controller (GIC).
+These two interrupt controllers are cascaded, meaning that 64 interrupt lines are 
+wired to the BIC which in turn compresses them into 2 interrupt lines for the GIC
+controller; additionally, the GIC also receives some interrupt lines from mailboxes
+and USB.
+
+ \begin{figure}[h]
+ \includegraphics[scale=0.55]{tesi3.png}
+ \caption[Figure 3]{BCM2837 interrupt controllers configuration}\label{fig:interrupt}
+ \end{figure}
+From a practical standpoint there are often serveral registers indicating which interrupt
+line is being asserted at any moment. There is no apparent drawback in ignoring most
+of them and just reading each device-specific register to discern which source fired
+the exception.
+The general interrupt organization is very confused and obscure. Interrupt functionality
+was achieved mainly through examples and reverse engineering regarding the specific
+device taken in consideration at the time.
+What follows is a brief listing of interrupt related configuration for the devices
+used in this work.
+
+\begin{description}
+    \item[UART] Both UART devices are cascated through the two interrupt controllers;
+        although they can be checked via registers in both controllers, it is suggested
+        to only read the Masked IRQ and IIR registers of the respective peripheral.
+    \item[ARM timer] Being this an interrupt internal to the ARM processor its
+        status has only been checked against the innermost interrupt controller (GIC).
+        It is not clear whether it is present in the BIC as well.
+    \item[Inter processor mailboxes] Possibly the sole source clearly
+        depicted from the documentation, its presence can be understood from the 
+        corresponding register in the Generic Interrupt Controller (as indicated
+        by \ref{fig:interrupt}).
+\end{description}
+
+\subsection{Inter Processor Interrupt (IPI)}
+In a multicore system such as the Raspberry Pi 3 the need arises for a privileged
+communication channel between each core. The ARM Cortex-A53 does not provide an 
+explicit method to do so, and it is left to the Generic Interrupt Controller to 
+provide.
+Similarly to the interface between ARM and Videocore there are mailboxes between
+the four cores of the CPU as well.
+
+The operation of those inter core mailboxes is much more straightforward than the
+CPU-GPU counterpart. There are four for each core and for each mailbox the GIC
+exposes three types control registers, for a total of 36 registers 
+\footnote{Note: the first kind of register cover all four mailboxes for each core}.
+\begin{description}
+    \item[Mailbox Control] four registers of this type in total, one for each core
+        and covering its four mailboxes. They enable an interrupt or fast interrupt
+        line for each mailbox.
+    \item[Mailbox Write-Set] four registers for each mailbox in every core, so 
+        sixteen of them in total. They are write only and are used to put the
+        actual data in the mailbox. Upon write the corresponding enabled exception
+        (if any) is fired for the selected core.
+    \item[Mailbox Read and Write-Clear] one register for each corresponding
+        Write-Set register. They can be read to receive the data sent by writing
+        in the Write-Set register, and have to be written to disarm the interrupt
+        line. Each bit of the register is independent in firing the interrupt, so 
+        to completely clear the same content that was read from the register must
+        be written back on it.
+\end{description}
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Emulated peripherals}
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
+\chapter{Student's Perspective}
+
+\clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Usage and Debugging}
+\section{Final Result}
+The final result of this work consists, from the user perspective, solely of 
+two files: {\tt hal.elf} and {\tt hal.ld}.
+The first is the the hardware abstraction layer compiled for an ARM64 target, 
+containing system initialization and emulated devices management; the second is 
+its linker script, to be used to link an application to the hal.
+
+The hal performs all the necessary routines and then calls a {\tt main} function.
+There is a weak-defined {\tt main} included with the hal that just echoes every
+character received on UART0.
+From there, the user provided code is expected to write specific memory addresses
+to define new exception handlers and control emulated devices. 
+
+One of the objectives of this work was to avoid creating ad hoc software and
+relying as much as possible on widespread tools. Because of this, there is no
+custom package like the $\mu$MPS2 emulator to install; instead the user needs
+a proper cross compile toolchain for ARM64 (or an ARM64 device, like the Raspberry
+Pi itself) and eventually Qemu.
+
+Given a compiled elf with the user's code called {\tt app.elf} and assuming to
+use {\tt aarch64-elf-gcc} as a cross compiler, the process to create a kernel image
+would be 
+\begin{lstlisting}
+aarch64-elf-ld -nostdlib -nostartfiles -Thal.ld \
+    -ooutput.elf hal.elf app.elf                                                                                                                                    
+aarch64-elf-objcopy output.elf -O binary kernel8.img
+\end{lstlisting}
+The resulting binary can then be placed on a microSD card and run on a Raspberry Pi 3
+or on Qemu
+
+\section{Qemu}
+Since version 2.12 Qemu supports a Raspberry Pi 3 emulated machine.
+The official version for the Linux distro of choice may be less recent, in 
+which case the user needs to compile the package from source.
+ Particular care was taken in assuring the same code runs with no discernible difference on
+the emulator and the device, which was not a difficult task.
+Usually, in the rare situations where virtual and real boards differ in their
+behaviour the real hardware is in the right (as one would expect).
+Some examples found along the way are:
+\begin{itemize}
+    \item Uninitialized memory location will inevitably contain null values if 
+        running under Qemu; the real world RAM is not so clement, and will live 
+        up to the tale of having its content randomized after a reset.
+    \item The MMU memory configuration includes distinguishing between device
+        and normal memory: while the latter ban be subject to caching to increase performance,
+        the former will not be optimized. Device memory is meant for memory mapped
+        areas that are connected to peripherals, as their volatile nature would
+        mix with caching for uncoherent results.
+        Failing to set the device area as device memory will be forgiven on Qemu
+        as there are no real peripherals; instead, the Raspberry Pi board will most likely
+        not behave as expected.
+    \item Qemu is whimsical about the memory address where to load the kernel image.
+        The emulator's boot sequence is different from the real device as the
+        {\tt kernel8.img} file is not read from the microSD card but passed from
+        the command line. Qemu invariably starts the execution by jumping at 
+        {\tt 0x80000}; if that is not the same address referenced by the linker
+        script the kernel will fail to run.
+\end{itemize}
+
+Qemu requires a kernel image and a microSD card image to be passed as command
+line arguments. An example command to run the emulator is:
+%TODO: specify how to create an image
+\begin{lstlisting}
+qemu-system-aarch64 -M raspi3 -kernel kernel8.img \
+    -drive file=drive.dd,if=sd,format=raw \
+    -serial vc -serial vc
+\end{lstlisting}
+
+Where the command line options have the following meaning:
+\begin{description}
+    \item[-M raspi3] specifies the machine to emulate.
+    \item[-kernel kernel8.img] specifies the kernel image to run.
+    \item[-drive file=drive.dd,if=sd,format=raw] attaches the microSD card, here
+        using an image file. Note that a real device can be used in the same way,
+        for example using {\tt file=/dev/mmcblk0}, allowing to run both on the
+        board and the emulator with the same exact drive.
+    \item[-serial vc] each serial option accounts for a UART interface (UART0 and UART1,
+        in this order). {\tt vc} stands for ``virtual console'' and will open a 
+        tab in the Qemu window. Another possible value is {\tt stdio}, which will
+        conveniently pipe the serial output of the chosen interface on the shell
+        (obviously available for only one of the two UARTs).
+\end{description}
+
+\section{Debugging}
+The debug of the compiled kernel can be carried over Qemu with GDB. Using the
+{\tt -gdb tcp:1234} parameter Qemu opens a debugging tcp port for a GDB client
+to connect to (another port can be specified). The {\tt -s} command line flag 
+brings the same result in a shorter format, and by adding {\tt -S} as well the
+emulator will not start the execution, allowing the developer to connect.
+
+Once the emulator is ready, a GDB client can connect to it. A client for
+ARM64 should be present within the toolchain used to compile the kernel.
+ A simple command line client may attach using the following commands (assuming
+ the {\tt aarch64-elf-gcc} toolchain is installed)
+
+\begin{lstlisting}
+aarch64-elf-gdb
+file output.elf
+target remote localhost:1234
+\end{lstlisting}
+
+Emulators like $\mu$MPS2 have the prominent advantage of a specifically designed
+running and debugging interface; nonetheless, a GDB server is a complete and
+advanced debugging suite. The command line debugger may seem a scarce alternative,
+but there are plenty of richer options; the author recommends {\tt gdbgui}, 
+a browser-based Python GDB client.
+Gdbgui can be installed via {\tt pip} or as an official package. It must be launched
+with the {\tt --gdb} (or {\tt -g}) command line option to specify a proper GDB
+client (i.e. the one found within the ARM64 toochain); it acts as a web server
+reachable at the default port {\tt 5000} with any browser, and provides an intuitive
+interface fitted with step-by-step debugging, memory inspection, threaded view and
+so on.
+
+ \begin{figure}[t]
+ \includegraphics[scale=0.34,angle=-90,origin=c]{tesi4.png}
+ \caption[Figure 4]{gdbgui browser interface}\label{fig:gdbgui}
+ \end{figure}
+
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%non numera l'ultima pagina sinistra
 \clearpage{\pagestyle{empty}\cleardoublepage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%per fare le conclusioni
 \chapter{Conclusions and Future Work}
 \section{Debugging with GDB}
-\section{Other arm64 SoC}
+Being a off-the-shelf software GDB is flexible enough to be extended with 
+a specifically tailored client. GDB provides a machine interpreter that recognizes
+machine readable commands for the purpose of creating higher level interfaces.
 
+If the generic approach of gdbgui was deemed too complex for inexperienced graduate
+students one could implement a $\mu$MPS2-like debugging interface that connects
+to the Qemu GDB server. Using the same interface but on a different note a
+debugging environment could be created inside a commonly used IDE, like Atom or 
+Visual Studio Code.
+
+\section{Other ARM64 SoC}
+Although it is now firmly seated in the Olympus of open source educational boards,
+the Raspberry Pi family is build on awfully obscured and undocumented hardware.
+Broadcom follows the market trend of not releasing any information on its 
+products like other manufacturers.
+There are many Raspberry Pi-like boards that base themselves on similar hardware:
+namely, a potent ARM CPU assisted by a graphical processing unit. In principle,
+the work that has been done for the British board could be easily ported to a 
+wide number of similar devices. The Pine64 family, for example, has recently
+marketed a laptop powered by one of their compute modules. Running a toy
+OS on a real laptop could be a even higher highlight for an undergraduate
+or even graduate student.
 
 \begin{thebibliography}{90}             %crea l'ambiente bibliografia
-\addcontentsline{toc}{chapter}{Bibliografia}
+\addcontentsline{toc}{chapter}{Bibliography}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%provare anche questo comando:
 %%%%%%%%%%%\addcontentsline{toc}{chapter}{\numberline{}{Bibliografia}}
+\bibitem{minix} Andrew S. Woodhull, Andrew S. Tanenbaum, 
+                Operating System Design and Implementation, 1997.
 \bibitem{bakingpi} University of Cambridge, Department of Computer Science and Technology,
                     Baking Pi - Operating Systems Development,
                     \url{https://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/}
