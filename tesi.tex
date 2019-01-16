@@ -18,6 +18,7 @@
 \usepackage{amsthm}
 \usepackage{hyperref}
 \usepackage{listings}
+\usepackage[table,xcdraw]{xcolor}
 
 \oddsidemargin=30pt \evensidemargin=20pt%impostano i margini
 \hyphenation{sil-la-ba-zio-ne pa-ren-te-si}%serve per la sillabazione: tra parentesi 
@@ -141,6 +142,8 @@ as example.
 \clearpage{\pagestyle{empty}\cleardoublepage}%non numera l'ultima pagina sinistra
 \chapter*{Sommario}
 TODO: traduzione dell'abstract
+
+\renewcommand\labelitemi{\tiny$\bullet$}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%non numera l'ultima pagina sinistra
 \clearpage{\pagestyle{empty}\cleardoublepage}
@@ -812,6 +815,158 @@ exposes three types control registers, for a total of 36 registers
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Emulated peripherals}
+The Raspberry Pi 3 (or any other version or model) does not have many peripheral
+devices to toy with. In part this is due to its heritage of low resource board, 
+and in part to extensibility through four generic USB ports and 40-pin header,
+allowing for a wide range of HAT (Hardware Attached on Top) extensions and external
+USB devices.
+In the perspective of an educational project however this is a severe limitation.
+While $\mu$MPS2 and $\mu$ARM can each bring five device types with eight possible
+instance per type, the Raspberry Pi has only two really usable devices: the 
+two serial interfaces (that strongly resemble $\mu$MPS2 terminals).
+
+Other options cannot be considered for multiple reasons:
+\begin{itemize}
+    \item The screen is simple and usable, but lacks educational value. It is 
+        nothing more than a buffer to write on; the GPU then manages actually
+        sending the data to the screen.
+    \item The EMMC interface is far too complex to be used by students. The professor
+        would need either to spend a great deal of time and effort to explain how
+        it works or provide a library to access it, in contrast with the phylosophy
+        of this work.
+    \item The USB controller suffers a even worse degree of complexity, to the point
+        that developing a support library would be a monumental task in itself.
+        Last but not least, it is not supported by Qemu.
+    \item The network interface is unfortunately not directly connected to the ARM
+        but instead managed by the USB controller.
+    \item Other auxiliary peripherals like the two SPI interfaces would be perfect
+        for the task: although arguably too low level, many modern motherboards
+        include SPI or I2C controlled peripherals, making it an intersting addition
+        to the program. However, those are not supported by Qemu.
+\end{itemize}
+
+To mitigate this problem, three classes of new devices have been implemented as 
+emulated peripherals in the hardware abstraction layer. Using $\mu$MPS2 as a reference,
+these classes are tapes, disks and printers.
+
+While building an entire emulator would give full control over the device interface,
+in this work the emulation is carried on to the best level permitted by a bare
+metal environment, leaking some imperfections on the exposed controls.
+
+\section{Emulated Device Interface}
+Initially emulated devices were made accessible via fake registers: simple pre-established
+memory locations that were frequently polled by the abstraction layer.
+Though most similar to the $\mu$MPS2 approach, this idea had significant flaws.
+\begin{itemize}
+    \item fake registers had no read or write limitations; location that should
+        logically have been read only could be modified without limit, leaving
+        the device in an incoherent state.
+    \item polling was a frail mechanism, prone to error and race conditions. 
+         A real device starts working the moment
+        its registers are written, while in this scenario the user had to wait 
+        for the contents to be read by the abstraction layer. This lead to 
+        an unintuitive programming path, requiring the user to either poll 
+        for changes in turn or use an {\tt swi} assembly instruction to wait for
+        the polling interrupt.
+    \item generally speaking, it is good practice to avoid polling when possible.
+\end{itemize}
+
+A solution was found that strays from the previous work's approach but better
+fits the new environment and allows for a cleaner emulation: using mailboxes.
+
+Some of the peripherals on the BCM2837 board are already managed by the GPU
+through mailboxes, like the HDMI controller or the on-board activity led. In 
+a very similar way, the abstraction layer is notified of a new command for printers,
+tapes or disks by a write to the inter core communication mailbox.
+Specifically, the mailbox 0 of the first core is reserved for emulated devices control.
+This behaviour is transparent to the user because it raises a FIQ instead of a 
+normal interrupt, and thus it can be received at any moment.
+
+A command to a emulated device is then issued by writing some value to the mailbox
+0 write-set register of the first core, found at memory address {\tt 0x40000080}.
+The value must have the following format: the two least significant bits are the
+device number and the two following bits are the device class.
+The upper 28 most significant bits should point to a 16-byte aligned address containing
+a register structure for the selected device.
+
+\begin{figure}[h]
+\includegraphics[scale=0.571]{tesi5.png}
+\caption[Figure 5]{mailbox structure}\label{fig:mailbox}
+\end{figure}
+
+This should remind the reader of the mailbox communication protocol used by ARM
+to talk with the Videocore, with the channel number encoded in the four least significant
+bytes. Since it is a mechanism already present in the system it fits naturally
+in the development process.
+
+The ``register'' structure that should be pointer by the mailbox address is nearly 
+identical to the device register layout in $\mu$MPS2 and $\mu$ARM.
+
+\begin{table}[h]
+\begin{center}
+    \begin{tabular}{|c|c|c|c|}
+    \hline
+    \rowcolor[HTML]{C0C0C0} 
+    Field \# & Address   & Field name & Size    \\ \hline
+    0        & base+0x0  & STATUS     & 32 bits \\ \hline
+    1        & base+0x4  & COMMAND    & 32 bits \\ \hline
+    2        & base+0x8  & DATA0      & 32 bits \\ \hline
+    3        & base+0xC  & DATA1      & 32 bits \\ \hline
+    4        & base+0x10 & MAILBOX    & 32 bits \\ \hline
+    \end{tabular}
+ \caption[Table 1]{device register layout}\label{tab:reg}
+\end{center}
+\end{table}
+
+Every device can have special functions for each register; what follows is a
+general description.
+\begin{description}
+    \item[STATUS] contains the device state.
+    \item[COMMAND] contains the command code to be executed.
+    \item[DATA0 \& DATA1] carry additional arguments for the command.
+    \item[MAILBOX] is written by the system to notify the command has been carried on.
+\end{description}
+
+Since this structure is nothing but a user memory location, fields like \textbf{STATUS}
+and \textbf{MAILBOX} are uninitialized at first; only \textbf{COMMAND}, \textbf{DATA0} and \textbf{DATA1}
+must contain proper data. Once the abstraction layer has received the fast interrupt
+and parsed the registers it copies the internal state of the device onto the
+provided memory location, populating all of its fields.
+
+After receiving the mailbox the abstraction layer sets the \textbf{MAILBOX} field
+to 1. This however does not mean the operation has been finished successfully, as 
+real world devices take time to operate; as such, there are fabricated delays between
+commands and execution.
+
+Once the execution is complete an interrupt is asserted. Interrupt lines for emulated
+devices are emulated as well with a memory location allocated for the task, at 
+base address {\tt 0x0007F020}.
+
+\begin{table}[h]
+\begin{center}
+    \begin{tabular}{|c|c|c|c|}
+    \hline
+    \rowcolor[HTML]{C0C0C0} 
+    Interrupt line \# & Address  & Device class & Size   \\ \hline
+    0                 & base+0x0 & Timer        & 8 bits \\ \hline
+    1                 & base+0x1 & Disk         & 8 bits \\ \hline
+    2                 & base+0x2 & Tape         & 8 bits \\ \hline
+    3                 & base+0x3 & Printer      & 8 bits \\ \hline
+    \end{tabular}
+ \caption[Table 2]{emulated interrupt lines}\label{tab:reg}
+\end{center}
+    \end{table}
+
+\section{Tapes}
+
+\section{Disks}
+
+\section{Printers}
+
+
+
+\clearpage{\pagestyle{empty}\cleardoublepage}
+\chapter{Source Code Organization}
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Student's Perspective}
@@ -865,7 +1020,7 @@ Some examples found along the way are:
         and normal memory: while the latter ban be subject to caching to increase performance,
         the former will not be optimized. Device memory is meant for memory mapped
         areas that are connected to peripherals, as their volatile nature would
-        mix with caching for uncoherent results.
+        mix with caching for incoherent results.
         Failing to set the device area as device memory will be forgiven on Qemu
         as there are no real peripherals; instead, the Raspberry Pi board will most likely
         not behave as expected.
