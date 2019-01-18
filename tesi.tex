@@ -815,6 +815,7 @@ exposes three types control registers, for a total of 36 registers
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Emulated peripherals}
+\label{emulated}
 The Raspberry Pi 3 (or any other version or model) does not have many peripheral
 devices to toy with. In part this is due to its heritage of low resource board, 
 and in part to extensibility through four generic USB ports and 40-pin header,
@@ -955,9 +956,14 @@ base address {\tt 0x0007F020}.
     \end{tabular}
  \caption[Table 2]{emulated interrupt lines}\label{tab:reg}
 \end{center}
-    \end{table}
+\end{table}
 
 \section{Tapes}
+Four instance of the tape device are supported. They are read only and work as if 
+queried through a DMA system.
+The tape can be viewed as a sequential list of 4KiB blocks. each block is marked 
+with a 4 bytes delimiter denoting the content of the underlying block.
+
 
 \section{Disks}
 
@@ -966,7 +972,178 @@ base address {\tt 0x0007F020}.
 
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
-\chapter{Source Code Organization}
+\chapter{Project Internals}
+In this chapter we describe in reasonable detail the source code of the 
+project. The discussion will tipically hover at a structural level, depicting 
+the design choices and code organization. This part will be most interesting for
+those with the intent of maintaining of modifying the work, or to study ARM
+bare metal development.
+
+The size of the project is comparatively small, only reaching about 4000 lines of 
+code. The real weight of this work does not lie in the actual software that was
+written but in the idea and study of the environment, pioneering the possibility
+of developing a proof-of-concept OS on real hardware instead of an emulator.
+
+\section{Design Principles and Overall Structure}
+Besides creating a convenient abstraction layer, the whole code base is written 
+with the goal of being an understandable example of bare metal development. Particular 
+care is taken in making sure that every function is readable and understandable
+with a single glance even out of context and in using descriptive, self-explanatory
+names. Where deemed necessary, comments help to further exaplain what is happening.
+
+Source files can be grouped in three main categories. First, the core of the abstraction
+layer is comprised basically of the assembler entry point, the C entry point and
+the interrupt handling routines. Second, a small library used internally to 
+access hardware peripherals; logging routines, microSD card reading and writing, 
+timer management. Third are the modules of the emulated devices like tapes and
+printers, leaning on the previous utilities to create the illusion of physical
+peripherals.
+
+\subsection{Implementation Language}
+The choice of language is severely limited by the bare environment and fell unsurprisingly
+on C and Assembly. Such basic programming languages contribute to the overall simplicity,
+as there are no particular patterns or constructs used beside raw memory management.
+
+The Assembler compoment was kept to a minimum for ease of understanding; from
+the moment the C stack is available there is no real reason not to jump into 
+C code (unless the goal was to exercise Assembly programming, which is not our case).
+
+Thus, there are only two Assembly source files: {\tt init.S} is the absolute first
+entry point and provides initialization for system registers, interrupt vectors, 
+bss section and multicore functionality; {\tt asmlib.S} contains utility functions
+that make heavy use of general and specific purpose registers that would have
+required inline Assembly instructions anyway if implemented in C.
+
+\subsection{Build Tools}
+Contrarily to the $\mu$MPS family of emulators, this work does not use the 
+Autotool suite of building tools (GNU Automake and Autoconf) to manage source 
+compilation and package installation.
+Not having a newly created graphical interface there are no library dependencies
+such as Qt, weakening the need for strict dependency check. 
+This, together with a smaller overall codebase prompted the author to search 
+for a simpler and more modern build tool, and the final choice is Scons.
+
+Scons has the advantage of being much more flexible and easy to use when compared
+to older tools. Instead of leaning on a brand new (and potentially cumbersome)
+language to configure the build process it relies on an already existing one, well
+received and praised for its approachable syntax: Python.
+
+In fact, Scons can be assimilated to a Python library for declaring build dependency
+trees. Its philosophy is similar to make but brings a much cleaner syntax and 
+user control over the process. 
+
+\subsection{Linker Script}
+The linker script is an essential piece when compiling for the Raspberry Pi 3. It has
+to specify {\tt 0x80000} as the loading address for compatibility reasons with Qemu
+and it ensures the initialization code is at the very beginning of the kernel image.
+It also allocates some memory as stack to be used by the abstraction layer interrupt
+routines.
+
+\section{Initialization}
+After loading all necessary components, the on-board GPU launches ARM execution at 
+address {\tt 0x80000}. There, we can find the compiled code from the 
+{\tt init.S} Assembly file.
+The first operations are:
+\begin{enumerate}
+    \item Enabling access at \textbf{EL0} and \textbf{EL1} to the internal ARM 
+        timer registers.
+    \item Setting a separate stack for each core for internal interrupt handling.
+    \item Enabling AArch64 execution state.
+    \item Moving the execution level to \textbf{EL1} \footnote{The Rasbperry Pi 3
+     starts in \textbf{EL2}, while Qemu initially runs at \textbf{EL3}}.
+    \item Setting up interrupt handling routines.
+    \item Preparing execution for all cores: while the first core jumps to C code,
+        the remaining ones are parked in a waiting loop, ready to be fired.
+    \item The bss section (uninitialized data) is zeroed and the first core jumps
+        to the {\tt bios\_main} function.
+\end{enumerate}
+
+From there control is passed to C, with another series of initialization routines:
+\begin{enumerate}
+    \item The memory locations dedicated to device emulation and user interrupts
+        are cleared.
+    \item Every real device is initialized: GPIOs, UARTs, EMMC, display.
+    \item Every emulated device is initialized, building on the real hardware.
+    \item Cores 1, 2 and 3 are unlocked from their parked state and set to 
+        run an infinite wait loop.
+    \item The user provided {\tt main} is called.
+\end{enumerate}
+
+\section{Interrupt Management}
+The core of the abstraction layer lies in the interrupt handling routines. We refer
+to the handlers predefined in the abstraction layer as internal interrupt handlers;
+ the students should define their own handlers, from now on referred to as user defined handlers.
+There are 4 possible (and real) IRQ sources:
+\begin{enumerate}
+    \item ARM timer
+    \item UART0
+    \item UART1
+    \item Mailboxes
+\end{enumerate}
+The {\tt main} function is assumed to never return; inside it the user should
+prepare an appropriate time slice and then start executing the first process.
+The time slice is set using the {\tt setTIMER()} function.
+Note that {\tt setTIMER()} does not interacts with the ARM timer directly but 
+through an internal queue of virtual timers.
+ Once the time slice is over the internal interrupt handler is called. It is 
+ responsible for operating emulated devices, but other than that immediatly
+ passes control to the user defined interrupt handler.
+
+ \begin{figure}[h]
+    \begin{center}
+ \includegraphics[scale=0.8]{tesi6.png}
+ \caption[IRQ switch]{Interrupt handling schematic}\label{fig:irq}
+    \end{center}
+ \end{figure}
+
+Other exception handlers, like the synchronous exception handler, are even 
+simpler, reduced to passing control to the user defined routine if present.
+
+
+\section{Emulated Devices}
+The idea behind emulated peripherals and their fabricated interface 
+have already beed described in Chapter \ref{emulated}. Here we give a more detailed 
+presentation about the principle under which they work.
+
+A command to an emulated device is issued through a mailbox. For coherency reasons
+interrupts are however disabled at execution level \textbf{EL1} (the execution
+level of user defined interrupts). To maintain this precaution and still allow 
+user code running at \textbf{EL1} to be properly served when sending a command, the
+special mailbox used for emulated peripherals fires a fast interrupt request (FIQ)
+instead.
+Fast interrupts are kept obscured to the user and managed only internally (in fact,
+for this single purpose). IRQs and FIQs are separated for historical reasons, so 
+the abstraction layer can disable the former and enable the latter.
+
+Some commands require a two-step management to more closely resemble a real peripheral.
+The first step is the fast interrupt, and is present for every command. For longer
+operations a timer is set to be executed by a normal interrupt after a certain amount
+of time.
+
+\subsection{Timer Queue}
+The second step of some device commands is scheduled for execution after a while;
+since there is only one timer in the system to fire scheduled interrupts, this would
+eventually overwrite other pending timers (namely the process time slice).
+To prevent this internal timers uses a set of queue managing functions to 
+schedule multiple timers at once. The ROM function {\tt setTIMER()} itself
+just pushes a new timer onto the queue.
+
+The queue is kept ordered from the first timer that will occur to the last.
+When a interrupt is fired all the timers that were scheduled before the
+current time are popped out of the queue, and the first remaining element (if any)
+is scheduled again.
+
+Interestingly, the implementation of this module is heavily inspired by the 
+solution to phase 1 of the KayaOS project, covering process and semaphore queues.
+
+\section{Hardware Library}
+Modules under the {\tt source/hal/} subdirectory contain functions to conveniently access 
+and use hardware peripherals. They serve a purpose mainly for usage internal to 
+the project, as the abstraction layer does not normally expose those functions
+(e.g. reading and writing the microSD card to emulate disk and tape devices).
+They could however be seen as one of the many educational examples about 
+bare metal programming for the BCM2837 and ARM processors in general.
+
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Student's Perspective}
@@ -1099,6 +1276,22 @@ so on.
 \clearpage{\pagestyle{empty}\cleardoublepage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%per fare le conclusioni
 \chapter{Conclusions and Future Work}
+\section{Extending Qemu}
+The recently added Raspberry Pi machine configuration for Qemu only supports a few
+capabilities of the original board: the two serial interfaces, the framebuffer
+display and the microSD card EMMC.
+The biggest missing part is of course the USB controller (bringing around the
+Network interface as well); the base complexity of the USB protocol, however,
+ would probably make it an unsuitable choice for learning projects anyway.
+
+Peripherals of less practical value in an emulator would perhaps end up being
+most interesting in the scope of OS study. SPI and I2C are relatively
+easy low level serial protocols that could make an interesting addition to the
+learning program; same goes for the PCM audio interface and the whole GPIO 
+header in general.
+Qemu is a fairly flexible emulator, and a future improvement could focus on 
+enriching the virtual environment with more device options.
+
 \section{Debugging with GDB}
 Being a off-the-shelf software GDB is flexible enough to be extended with 
 a specifically tailored client. GDB provides a machine interpreter that recognizes
@@ -1142,6 +1335,7 @@ or even graduate student.
                     \"Studio e Realizzazione dell'emulatore $\mu$ARM e del progetto
                     JaeOS per la Didattica dei Sistemi Operativi\",
                     Alma Mater Studiorum, 2016.
+\bibitem{pop} M. Goldweber, R. Davoli, $\mu$MPS Principles of Operation, Lulu Books, 2011
 \bibitem{ultibo} The Ultibo Project, \url{https://ultibo.org/}
 \bibitem{circle} The Circle C++ environment, \url{https://github.com/rsta2/circle}
 \bibitem{bcm2835} BCM2835 ARM Peripherals, Broadcom.
