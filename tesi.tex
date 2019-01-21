@@ -19,6 +19,7 @@
 \usepackage{hyperref}
 \usepackage{listings}
 \usepackage[table,xcdraw]{xcolor}
+\usepackage{multirow}
 
 \oddsidemargin=30pt \evensidemargin=20pt%impostano i margini
 \hyphenation{sil-la-ba-zio-ne pa-ren-te-si}%serve per la sillabazione: tra parentesi 
@@ -467,6 +468,369 @@ division of ARMv7.
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Overview of the ARMv8 Architecture}
+What follows is a description of the ARMv8 architecture at a detail level deemed
+sufficient to understand the entirety of this project. The main references are 
+of course the Programmer's Guide \cite{guide} and the Arm Reference Manual \cite{armarm}.
+
+ARMv8 is the latest generation of ARM architectures, following ARMv7. It brings
+an enourmous list of changes from its predecessors, finally adding a 64 bit option
+to the family; it does so while still keeping backward compatibility towards 32 bit
+code and applications. The execution state in which an ARMv8 processor runs 64 bit
+code is called \textit{AArch64}, while \textit{AArch32} identifies the compatibility
+state for 32 bit applications.
+The AArch32 is very similar to the previous ARMv7 specification; in fact, when 
+the scope of this project was still moving from the Raspberry Pi 2 (ARMv7) to the
+Raspberry Pi 3 (ARMv8) the source code and toolchain used were initially unchanged.
+Being the first attempt for the ARM consortium at 64 bit machines it takes advantage
+of a fresh start, removing many elements of complexity found in past entries while
+copying positive qualities from competitors that came before them (like 64 bit MIPS).
+
+\section{Exception Levels}
+When executing in AArch32 state the registers and system configuration is almost
+identical to ARMv7, separated in no less than 9 encoded processor modes with one
+of 3 possible privilege level. AArch64 significantly simplifies this model with
+just 4 exception levels, ranging from EL0 to EL3. Compatibility is achieved with 
+non-injective, surjective mapping from processor modes to exception levels.
+
+\begin{figure}[t]
+    \begin{center}
+\includegraphics[scale=0.6]{tesi7.png}
+\caption[ARMv8 Exception Levels]{ARMv8 Exception levels and their main purpose}\label{fig:armv8el}
+    \end{center}
+\end{figure}
+
+We describe briefly the function of each exception level:
+\begin{description}
+    \item[EL0] is the lowest exception level, often referred to as ``unprivileged''
+        in opposition to every other, ``privileged'', level. It has severe 
+        limitation in accessing system registers and failure to respect them
+        is met with a synchronous abort. It is meant to run user application, 
+        processes below the kernel.
+    \item[EL1] is the first privileged level. It is where most interrupts end
+        up and is meant for the OS kernel.
+    \item[EL2] is the Hypervisor level; here resides harware support for virtualization,
+        a level meant to supervise virtual machines. For example, KVM is an in-kernel
+        virtualization running at level \textbf{EL2} and supervising the virtual kernel 
+        at \textbf{EL1}.
+    \item[EL3] is used to separate the system into secure partitions with the
+        hardware TrustZone support.
+\end{description}
+
+\subsection{Changing Exception Level}
+A change in the current exception level can be either caused by a willing decision
+of a higher privilege \textbf{EL} to a lower privilege \textbf{EL} or following 
+an exception. Moreover, an exception cannot be taken to a lower exception level (e.g. if the core 
+is currently at \textbf{EL2} and an interrupt line that should be handled
+at \textbf{EL1} is asserted it will be ignored as long as the exception
+level is not lowered, regardless of interrupt enabling). 
+To access a lower exception level an {\tt eret} instruction is required: {\tt eret}
+loads the state stored in \textbf{SPSR\_ELn} (see \ref{spsr}), where \textbf{ELn} 
+is the current exception level, as the new system status (exception level included).
+Since no exception ever handled at \textbf{EL0}, \textbf{EL0} is only reachable 
+on {\tt eret} instructions.
+
+Exceptions are normally taken to \textbf{EL1} but can be set to run in \textbf{EL2}
+or even \textbf{EL3} by configuring corresponding system registers \textbf{HCR\_EL2}
+and \textbf{SCR\_EL3}, Hypervisor Configuration Register and Secure Configuration
+Register respectively. 
+
+It is also possible to change execution \textit{state} (i.e. AArch64 or AArch32)
+during runtime, but that is irrelevant for the scope of this work, that lies
+entirely in AArch64.
+
+\section{Registers}
+\subsection{General Purpose Registers}
+One of the immediate benefits of 64 bit architecture is a larger register pool:
+ARMv8 uses 31 64-bits wide general purpose registers, more than doubling from
+ARMv7.
+The registers are numbered from \textbf{x0} to \textbf{x30}. Although they are
+freely accessible the developer should be mindful of their secondary purpose
+for function calling convention (both C and Assembler):
+\begin{itemize}
+    \item \textbf{x0} to \textbf{x7} are used to hold both arguments and return
+        value (only \textbf{x0}) of a C function.
+    \item \textbf{x8} is used to pass an indirect result value (e.g. a returned 
+        structure, in which case x8 holds the address to a properly set memory
+        location).
+    \item \textbf{x9} to \textbf{x18} are used to hold local variables in a 
+        routine call. They are caller-saved, which means that it is the caller
+        responsibility to preserve their content before issuing a C function call.
+    \item \textbf{x19} to \textbf{x28} are similar temporary registers, but for 
+        the callee to restore before returning; they are referred as callee-saved.
+    \item \textbf{x29} is the frame pointer.
+    \item \textbf{x30} is the link register.
+\end{itemize}
+Every general purpose register also has a 32 bit alias obtained replacing ``x''
+with ``w'' in the register's name (from \textbf{w0} to \textbf{w30}) that permits
+access to the lower (i.e. least significant) 32 bits of the register; the upper 
+32 bits are ignored.
+
+\begin{figure}[h]
+    \begin{center}
+\includegraphics[scale=0.55]{tesi8.png}
+\caption[32 bit alias]{64 bit register with ``x'' and ``w'' access}\label{fig:32reg}
+    \end{center}
+\end{figure}
+
+\subsection{Special Registers}
+\label{spsr}
+There are 5 special registers:
+\begin{description}
+    \item[Zero Register:] \textbf{xzr} and \textbf{wzr} provide access (as 64 and
+        32 bit register respectively) to a special register that ignores write
+        attempts and always read as zero.
+    \item[Program Counter (pc):] up until ARMv7 the program counter was a general purpose
+        register held in \textbf{r15}. In ARMv8 it has a very limited access,
+        being read only and only implicitly used in certain instructions. This is 
+        one of the biggest differences with previous architecture and caused a 
+        lot of initial confusion; its restrictiveness results nonetheless in a
+        much clearer and less error prone program flow.
+    \item[Exception Link Register (elr):] without free access to the program counter
+        the system must provide an alternative way to restore a process' execution
+        point. The exception link register holds the exception return address: it 
+        is automatically filled when one is fired and can be overwritten. Upon
+        executing an {\tt eret} instruction the value in \textbf{elr} is set as the
+        program counter.
+    \item[Saved Process Status Register (spsr):] similarly to \textbf{elr}, this
+        register is automatically initialized with various status informations
+        upon taking and exception, and is restored (after eventual modification)
+        with an {\tt eret} instruction.
+    \item[Stack Pointer (sp):] The current stack pointer. It is freely accessible
+        both in read and write operations.
+\end{description}
+
+\begin{figure}[t]
+    \begin{center}
+\includegraphics[scale=0.68]{tesi9.png}
+\caption[special registers]{AArch64 special registers}\label{fig:specialreg}
+    \end{center}
+\end{figure}
+
+As depicted in figure \ref{fig:specialreg} some special registers have different
+versions for different exception levels: there is a separated stack pointer 
+for all four of them and \textbf{EL0} is the only level missing \textbf{spsr}
+and \textbf{elr} (owing to the fact that they are exception related registers, and
+\textbf{EL0} never deals with exceptions or {\tt eret} instructions).
+
+Access to a special register from a different exception level is permitted if 
+said register belongs to a lower level: for example \textbf{EL3} can set all the
+other stack pointers (including its own), but \textbf{EL1} trying 
+to do the same will trigger an abort for \textbf{sp\_el2} and \textbf{sp\_el3}.
+
+\subsection{System Registers}
+Another significant turn from ARMv7 is the absence of a coprocessor interface.
+A coprocessor is an auxiliary core used to supplement the functions of the primary
+processor; ARMv7 specified a generic coprocessor interface to connect up to 
+15 assisting cores, of which one was reserved for system registers management.
+While coprocessors had to be controlled via specific instructions ARMv8 system registers
+are directly accessed in Assembly with the {\tt mrs} and {\tt msr} instructions
+as per any other register. This is a welcome change that simplifies the developer's
+approach to system configuration.
+
+Similarly to special registers many system registers have different, banked versions
+for some or all exception levels (usually not \textbf{EL0}), each with the
+suffix \textit{\_ELn} to indicate the corresponding level.
+There registers are usually 32 bits wide. What follows is a list of system registers
+considered most important for the purpose of this work; for a detailed description
+of the various bit fields refer to the ARM reference manual \cite{armarm}.
+\begin{description}
+    \item[Exception Syndrome Register:] \textbf{ESR\_EL\textit{n}}, for each exception 
+        level holds the information regarding the last occurred exception (only
+        for synchronous and SError, not for IRQs and FIQs. See \ref{exceptions}
+        for more on exceptions). It is necessary to distinguish between exception
+        classes and to find details specific to the exception.
+    \item[Fault Address Register:] \textbf{FAR\_EL\textit{n}}, it is used in pair 
+        with \textbf{ESR\_EL\textit{n}} to find which address caused a Data or 
+        Instruction synchronous abort.
+    \item[Hypervisor Configuration Register:] \textbf{HCR\_EL2}, controls 
+    virtualization settings and trapping of exceptions to \textbf{EL2}.
+    \item[Memory Attribute Indirection Register:] \textbf{MAIR\_EL\textit{n}}, 
+        stores the user-provided memory attribute encodings corresponding to the
+        possible values in a MMU translation table entry for translations at level \textit{n}.
+    \item[Multiprocessor Affinity Register:] \textbf{MPIDR\_EL1} is the 
+        executing core id, used mainly to distinguish on which core the code is 
+        runnint on.
+    \item[Secure Configuration Register:] \textbf{SCR\_EL3} controls Secure 
+    state and trapping of exceptions to EL3.
+    \item[System Control Register:] \textbf{SCTLR\_EL\textit{n}} controls 
+    architectural features, for example the MMU, caches and alignment checking.
+    \item[Translation Table Base Register 0:] \textbf{TTBR0\_EL\textit{n}}, holds
+        the address to the MMU translation table used normally at each exception level.
+    \item[Translation Table Base Register 1:] \textbf{TTBR1\_EL1}, holds
+        the address to the a special translation table used to separate application
+        and kernel space. See section \ref{mmu} for more.
+    \item[Vector Based Address Register:] \textbf{VBAR\_EL\textit{n}} is a pointer 
+        to the exception vector table for level \textit{n}.
+\end{description}
+
+\subsection{PSTATE}
+A reader with experience in ARM architecture will surely notice the lack of a
+current program status register, holding informations like the current exception
+level, aritmetic flags, interrupt mask and so on.
+The AArch64 version of said register is implicitly present and not directly 
+accessible. Instead, the single fields are supplied to read and
+write independently; this collection of ``fake registers'' is globally called 
+\textbf{PSTATE}. Curiously, querying for the \textbf{CPSR} register in a GDB 
+debugger will correctly display the \textbf{PSTATE} components as a whole, although
+no such register can be loaded from or stored to in Assembly code.
+
+\begin{table}[t]
+    \begin{center}
+    \begin{tabular}{|c|c|c|}
+    \hline
+    \rowcolor[HTML]{9B9B9B} 
+    Field name & Register handle              & Description                                                                                                                                                                                           \\ \hline
+    N          & \cellcolor[HTML]{FFFFFF}None & Negative condition flag                                                                                                                                                                               \\ \hline
+    Z          & None                         & Zero condition flag                                                                                                                                                                                   \\ \hline
+    C          & None                         & Carry condition flag                                                                                                                                                                                  \\ \hline
+    V          & None                         & Overflow condition flag                                                                                                                                                                               \\ \hline
+    D          & daifset and daifclr          & Debug mask bit                                                                                                                                                                                        \\ \hline
+    A          & daifset and daifclr          & SError mask bit                                                                                                                                                                                       \\ \hline
+    I          & daifset and daifclr          & Interrupt mask bit                                                                                                                                                                                    \\ \hline
+    F          & daifset and daifclr          & Fast interrupt mask bit                                                                                                                                                                               \\ \hline
+    SS         & None                         & Software Step bit                                                                                                                                                                                     \\ \hline
+    EL         & CurrentEl                    & Current exception level                                                                                                                                                                               \\ \hline
+    nRW        & None                         & \begin{tabular}[c]{@{}c@{}}Current execution state\\ (AArch32 or AArch64)\end{tabular}                                                                                                                \\ \hline
+    SP         & None                         & \begin{tabular}[c]{@{}c@{}}Stack pointer selector\end{tabular} \\ \hline
+    \end{tabular}
+    \caption[PSTATE fields]{PSTATE fields definitions}
+\end{center}
+    \end{table}
+
+\section{Exception Handling}
+In ARM architecture exceptions are conditions or system events that require some 
+action by privileged software to ensure smooth 
+functioning of the system; said condition is taken care of immediatly by interrupting
+the normal flow of software execution and starting another routine (the exception
+handler).
+There are several classes of exceptions; every class can branch in different kinds,
+and every exception can be either synchronous or asynchronous (see figure \ref{fig:exceptions}).
+
+The code to run when an exception is fired is specified by the developer in an 
+exception vector table. The pointer to the exception vector table is written to 
+\textbf{VBAR\_EL\textit{n}} register, for \textit{n} ranging from level 1 to 3,
+so every exception level has its own table (nothing prevents multiple levels
+to point to the same table however). For exceptions fired while at \textbf{EL0} 
+the table for \textbf{EL1} is used.
+
+The exception table can be anywhere in memory but must be 128 bytes aligned and 
+must have the format specified in table \ref{etable}.
+Each entry in the table is 16 instructions long, allowing for some control logic 
+to be present in the top level handler as well, before branching to a more complex
+routine.
+The table can be divided in four sections:
+\begin{enumerate}
+    \item handlers to be used when the exception does not change neither the current 
+        exception level nor the stack pointer.
+    \item handlers to be used when the exception does not change the current 
+        exception level but should use a specific stack pointer.
+    \item handlers to be used when the exception elevates the privilege level and
+        the execution state is in AArch64.
+    \item handlers to be used when the exception elevates the privilege level and
+        the execution state is in AArch32.
+\end{enumerate}
+
+Each section has four different handlers for synchronous exceptions, IRQ, FIQ
+and SError.
+
+\begin{table}[t]
+    \begin{center}
+    \begin{tabular}{|l|l|l|}
+    \hline
+    \rowcolor[HTML]{9B9B9B} 
+    Address           & Exception type & Context                                                                            \\ \hline
+    VBAR\_ELn + 0x00  & Synchronous    &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x80  & IRQ/vIRQ       &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x100 & FIQ/vFIQ       &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x180 & SError/vSError & \multirow{-4}{*}{\begin{tabular}[c]{@{}l@{}}Current EL\\ with SP0\end{tabular}}    \\ \hline
+    VBAR\_ELn + 0x200 & Synchronous    &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x280 & IRQ/vIRQ       &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x300 & FIQ/vFIQ       &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x380 & SError/vSError & \multirow{-4}{*}{\begin{tabular}[c]{@{}l@{}}Current EL\\ with SPx\end{tabular}}    \\ \hline
+    VBAR\_ELn + 0x400 & Synchronous    &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x480 & IRQ/vIRQ       &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x500 & FIQ/vFIQ       &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x580 & SError/vSError & \multirow{-4}{*}{\begin{tabular}[c]{@{}l@{}}Lower EL\\ using AArch64\end{tabular}} \\ \hline
+    VBAR\_ELn + 0x600 & Synchronous    &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x680 & IRQ/vIRQ       &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x700 & FIQ/vFIQ       &                                                                                    \\ \cline{1-2}
+    VBAR\_ELn + 0x780 & SError/vSError & \multirow{-4}{*}{\begin{tabular}[c]{@{}l@{}}Lower EL\\ using AArch32\end{tabular}} \\ \hline
+    \end{tabular}
+    \caption[Exception table]{Exception table format}
+    \label{etable}
+\end{center}
+    \end{table}
+
+\subsection{Interrupts}
+Interrupts can be fast interrupts (FIQ) or normal interrupts. Aside from the fact 
+that FIQ have higher priority, these two types of exception are virtually identical.
+Usually it is the developer's responsibility to route an interrupt source to 
+IRQ or FIQ.
+Interrupts are tipically associated with external hardware and connected to 
+input pins to the core. The connection can be direct or, more commonly, pass through
+an external device called interrupt controller that elaborates interrupt priorities
+and organization (see section \ref{gic}).
+
+Because the occurrence of interrupts is not directly related to the instruction
+cycle being executed by the core at any given time, they are classified as
+asynchronous exceptions.
+
+ \begin{figure}[t]
+ \includegraphics[scale=0.525]{tesi10.png} 
+ \caption[Exceptions]{Tree of exception classes.}\label{fig:exceptions}
+ \end{figure}
+
+%TODO: add a diagram
+
+\subsection{Aborts}
+Abort exceptions, also called system errors (SError), occur every time some abnormal
+condition is met during a memory access. Instruction Aborts result from an error
+during an instruction fetch cycle, while Data Aborts follow failed data access.
+
+Despite the names depicting error conditions, aborts can work in perfectly normal
+and predictable flows. This is the case of MMU faults, generated by the Memory
+Manage Unit on occasions like access to dirty page entries.
+The severity of conditions that set off abort exceptions can be configured to 
+some extent with system registers; for example, a TLB miss can be ignored or 
+fire an exception, and memory accesses can pass through address alignment 
+and permission checks which may or may not interrupt the process.
+
+Aborts can be both synchronous and asynchronous. MMU faults and alignment induced 
+aborts are always synchronous, while data aborts can be asynchronous in certain
+situations.
+
+\subsection{Reset}
+Reset is a special exception, fired on power up of the processor. Its handler is 
+implementation-specific and presumably located at address {\tt 0x80000} in the 
+case of the BCM2837.
+
+\subsection{Exception Generating Instructions}
+We have seen that a core can lower its exception level with {\tt eret}, but can
+only increase it through an exception. For this purpose there are Assembly instructions
+that induce an exception to a higher exception level, usually to require a service 
+paired with an higher privilege. The most obvious example of this behaviour are
+system calls.
+\begin{itemize}
+    \item \textbf{SVC:} the supervisor call instruction fires an exception
+        handled at \textbf{EL1}. Used by user programs to require kernel services.
+    \item \textbf{HVC:} the hypervisor call instruciton fires an exception
+        handled at \textbf{EL2}. Used by the guest OS to require hypervisor services.
+    \item \textbf{SMC:} the secure monitor call instruction fires an exception
+        handled at \textbf{EL3}. Allows to require \textit{secure world} context
+        switch.
+\end{itemize}
+Since those exceptions follow an instruction execution they are by definition
+synchronous.
+
+\section{The Memory Management Unit}
+
+\section{Memory Attributes}
+
+\section{Multiprocessor}
+
+\section{Security}
+
+\section{ARM Timer}
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Overview of the BCM2837}
@@ -748,6 +1112,7 @@ the user should really care about four registers: IO, IIR, IER and LSR.
 The serial configuration is the same as the UART0.
 
 \section{Interrupt Controller}
+\label{gic}
 The BCM2837 SoC has at least two devices acting as interrupt controllers. One of 
 them is clearly defined in the peripheral datasheet \cite{bcm2835}, while the
 other is not clearly named but hinted at thorugh register definition in a later 
@@ -1341,6 +1706,8 @@ or even graduate student.
 \bibitem{bcm2835} BCM2835 ARM Peripherals, Broadcom.
 \bibitem{rev3.4} ARM Quad A7 Core, Broadcom.
 \bibitem{pl011} PrimeCell UART (PL011) Technical Reference Manual, ARM.
+\bibitem{guide} ARM Cortex-A Series Programmer's Guide for ARMv8-A, ARM, 2015.
+\bibitem{armarm} ARM Architectural Reference Manual ARMv8, for ARMv8-A Architecture Profile, ARM, 2017.
 \end{thebibliography}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%non numera l'ultima pagina sinistra
 \clearpage{\pagestyle{empty}\cleardoublepage}
