@@ -20,6 +20,7 @@
 \usepackage{listings}
 \usepackage[table,xcdraw]{xcolor}
 \usepackage{multirow}
+\usepackage[bottom]{footmisc}
 
 \oddsidemargin=30pt \evensidemargin=20pt%impostano i margini
 \hyphenation{sil-la-ba-zio-ne pa-ren-te-si}%serve per la sillabazione: tra parentesi 
@@ -822,15 +823,342 @@ system calls.
 Since those exceptions follow an instruction execution they are by definition
 synchronous.
 
-\section{The Memory Management Unit}
-
 \section{Memory Attributes}
+\label{mair}
 
 \section{Multiprocessor}
 
 \section{Security}
 
 \section{ARM Timer}
+
+\clearpage{\pagestyle{empty}\cleardoublepage}
+\chapter{The Memory Management Unit}
+The Memory Management Unit is a device found in most CPUs tasked with the objective
+of translating virtual memory addressing with physical addressing. The Cortex-A53
+is no exception and has an advanced internal MMU. It is such an important part
+of the system that even if it's technically part of the ARMv8 specification it 
+deserves a chapter on its own.
+
+The main purpose of address translation is to allow each process to have its own
+virtual address space that has nothing to do with how much memory is available 
+(and where this memory is located) on the system, with hardware MMIO and other
+processes hidden from its view.
+If the memory management unit is active any address used in the system is first
+elaborated and translated: different sections of the 64 bits address (starting
+from most significant ones) are used to index different levels of a tree containing
+translation entries. Then there can be additional checks on whether the current
+exception level has the proper permissions to access the resulting physical memory.
+Only then the actual access is performed; all of this is handled by the hardware and 
+can be almost entirely ignored by the programmer after setup.
+
+\section{Address Translation}
+As briefly mentioned in the introduction when the MMU is active every address is 
+treated as multiple indexes for the translation table. The translation table is 
+a tree of translation entries that map a section of RAM: each level of the 
+tree has entries covering a certain number of elements in the next level until the 
+last, that maps memory directly.
+
+The following example considers a tree where each entry before last level
+points to 512 more entries and 
+depicts a trivial ``identity'' mapping: every virtual address is translated in 
+the same physical address. The bottom level covers a 4KiB block of memory directly
+(this reason for these numbers will be explained in section \ref{translationsize}). There
+are four levels in the tree, level 0 to 3.
+Presume we want to translate a 64 bits address:
+\begin{itemize}
+    \item the 16 most significant bits are reserved for kernel space virtualization
+        (more on this topic in section \ref{kernelvirt}).
+    \item bits 47:39 are the level 0 table and reference a level 1 entry. Each
+        level 0 entry spans a 512 GiB memory range ($2^39$).
+    \item bits 38:30 are the level 1 table and reference a level 2 entry. Each
+        level 1 entry spans a 1GiB memory range ($2^30$ or $512 GiB / 512$).
+    \item bits 29:21 are the level 2 table and reference a level 3 entry. Each
+        level 2 entry spans 2 MiB memory range, similarly to previous levels.
+    \item bits 20:12 are the level 3 table and reference the last level, made of 
+        direct memory blocks. Each memory block is 4KiB wide.
+    \item bits 12:0 are the offset for the last memory block and index the actual
+        word referenced.
+\end{itemize}
+
+%TODO:immagine
+
+In this mundane example it is evident how the translation process is arbitrary;
+every level can simply be cut off and the resulting address be obtained by adding
+the intermediate indexes and the remaining bits (to be considered as the final 
+offset). This is not possible anymore if the translation function is not an 
+identity. 
+In this case the translation function is codified by the pointers in the table entries;
+the table entry marks the beginning of the next level of tables and the corresponding
+piece of virtual address indexes the chosen entry.
+
+\subsection{Granule Size}
+\label{translationsize}
+With granule size we refer to the smallest possible block of memory that can be 
+indexed by the MMU tables; in the previous example, 4KiB.
+The ARMv8 specification allows for three different granule sizes: 4KiB, 16KiB and 64KiB.
+The actual ARM processor abiding to the standard can in turn implement those granules
+only partially. The Cortex-A53 implements them all.
+The granule size is a global setting, affecting the entirety of the page table.
+Different granule size dictate how many levels is possible to have and how many
+entries are in each table (for example, a granule of 64 KiB allow only 3 levels
+and a granule of 16KiB will result in 10 bit wide address sections).
+
+A small granule size will result in more control but also in a bigger table; to 
+divide a 2GiB RAM into 4KiB blocks an operating system will need 524288 64 bits
+wide table entries, for a total of 4MiB of allocated memory.
+Choosing a fine grained control does not mean commiting to it, however. If there
+are large sections of memory with the same memory attributes and virtual addressing
+(e.g. MMIO memory that should generally not be accessed by user processes) the 
+developer can ``cut early'' the page table tree and use any intermediate memory
+range. In the above example we could arbitrarily stop at level 2 and create a part
+of the table with direct entries spanning 2 MiB each.
+
+%TODO: immagine
+
+\section{Table Descriptor Format}
+When in AArch64 there is a single accepted format for table entries. We will now
+consider the configuration consequential to a 4 KiB granule size; other choices
+differ sligtly in translation indexes width and position, but maintain the same
+core concepts. The table descriptor is 64 bits wide, separated in fields like 
+in figures \ref{fig:desc1} and \ref{fig:desc2}.
+
+Any table entry is one of two types:
+\begin{enumerate}
+    \item \textbf{A table descriptor} that points to another table entry in the 
+        next level.
+    \item \textbf{A block entry} that resolves directly into a memory range of 
+        variable size, depending on the level.
+\end{enumerate}
+
+The entry type is defined by the two least significant bits in the descriptor, 
+as depicted in table \ref{tab:desc}; an invalid entry leads to an MMU fault exception.
+Note that not every level can host a block entry; with a granule size of 4 KiB, 
+level 0 does not admit that kind of descriptor.
+
+\subsection{Table Descriptors}
+Table descriptors point to a table entry in the next level. Bit fields have the 
+following meaning:
+\begin{itemize}
+    \item \textbf{[0]} marks the validity of the entry; 1 is valid, 0 is invalid.
+    \item \textbf{[1]} is the entry type. It is 1 for table next level descriptors.
+    \item \textbf{[2:11]} are ignored/reserved bits.
+    \item \textbf{[12\footnote{\label{4knote} This value can be different for granule
+        sizes other than 4KiB}:47]} is the address of the next level table. It is codified
+        as if it started from the least significant bit, with 
+        [11\footnote{see footnote \ref{4knote}}:0] bits assumed
+        as 0. Because of this all page tables must be 4096 ($2^12$) bytes aligned.
+    \item \textbf{[48:58]} are ignored/reserved bits.
+    \item \textbf{[59]} PXNTable field: private execute never bit for subsequent
+        levels of lookup; if set the memory range covered by this and following entries
+        cannot be executed by code at level \textbf{EL0}.
+    \item \textbf{[60]} XNTable field: execute never bit for subsequent levels
+        of lookup; if set the memory range covered by this and following entries
+        cannot be executed.
+    \item \textbf{[61:62]} APTable field: access permission bits for subsequent levels
+        of lookup; this field enforces permission rules for the memory range
+        indexed by this and following entries, combined in a hierarchical 
+        fashion (see table \ref{tab:aptable}). Subsequent table entries can
+        further restrict the permission rules but cannot loosen them; failure
+        to heed said rules will result in an appropriate abort exception.
+    \item \textbf{[63]} NSTable field: when in secure state this bit specifies
+        the security state for subsequent levels of lookup. When not in secure state
+        it is ignored.
+\end{itemize}
+
+\begin{table}[h]
+    \begin{center}
+    \begin{tabular}{|c|l|}
+    \hline
+    \rowcolor[HTML]{9B9B9B} 
+    \multicolumn{1}{|l|}{\cellcolor[HTML]{9B9B9B}APTable{[}1:0{]}} & Restriction                                                                                                                                            \\ \hline
+    00                                                             & No effect on subsequent levels of lookup                                                                                                               \\ \hline
+    01                                                             & \begin{tabular}[c]{@{}l@{}}Any access to this memory range from EL0\\ is forbidden.\end{tabular}                                                       \\ \hline
+    10                                                             & Memory is read-only.                                                                                                                                   \\ \hline
+    11                                                             & \begin{tabular}[c]{@{}l@{}}Any access to this memory range from EL0\\ is forbidden, while it is read-only for\\  higher privilege levels.\end{tabular} \\ \hline
+    \end{tabular}
+    \label{tab:aptable}
+    \caption[APTable]{Access Permission Table bit fiels. The two bits can be 
+    separated and seen as read-only bit ([0]) and \textbf{EL0} access ([1])}
+\end{center}
+\end{table}
+
+%TODO: immagine fig:desc1
+
+\subsection{Block Descriptors}
+Block descriptors represent direct access to a block of memory; when one is reached,
+it is the last stage of the translation process. They contain the following bit
+fields:
+\begin{itemize}
+    \item \textbf{[0]} marks the validity of the entry; 1 is valid, 0 is invalid.
+    \item \textbf{[1]} is the entry type. It is 0 for block descriptors.
+    \item \textbf{[2:4]} memory attributes index field. The value found here
+        indexes a memory address configuration defined in corresponding 
+        the \textbf{MAIR\_EL\textit{n}} register (see section \ref{mair}).
+    \item \textbf{[5]} is the non-secure bit. For memory accesses from 
+        secure state specifies whether the output address is in
+        the secure or non-secure address map. For accesses from non-secure state
+        this bit is ignored.
+    \item \textbf{[6:7]} are data access permission bits. Similar to APTable bits,
+        they are referred to the immediate block of memory (and can be further
+        restricted by previous APTable settings). For possible values see table
+        \ref{tab:apbits}.
+    \item \textbf{[8:9]} sets the shareability of the memory block, configuring
+        caching capabilities.
+    \item \textbf{[10]} is the access flag (AF). If it is not set it means the 
+        selected entry is accessed for the first time, in which case an MMU abort
+        will be fired. The exception handler should take care of the initialization,
+        set the access flag to 1 and attempt again the memory access.
+    \item \textbf{[11]} is the not global bit (nG). If a lookup using this 
+        descriptor is cached in a TLB, determines whether the TLB
+        entry applies to all ASID values, or only to the current ASID value
+        (see section \ref{tlb} for more).
+    \item \textbf{[12:47]} is the address to the memory block that is pointed byte
+        the descriptor. It is aligned similarly to the address in a table descriptor,
+        but it contains actual memory instead of a next level page table.
+    \item \textbf{[48:50]} are ignored/reserved bits.
+    \item \textbf{[51]} is the Dirty Bit Modifier (DBM), and it is used to keep
+        track of differences between caches and real memory. If it is set, caches
+        should be checked for stale entries. It can be managed either via 
+        hardware or software.
+    \item \textbf{[52]} is the Contigous bit, a hint bit indicating that the 
+        translation table entry is one of a contiguous set or entries and may be
+        be cached in a single TLB entry.
+    \item \textbf{[53]} PXN bit: privileged execute never bit. If set, the memory block's 
+        execution at unprivileged exception levels (\textbf{EL0}) is forbidden.
+    \item \textbf{[54]} XN bit: execute never bit. If set, the memory block's 
+        execution is forbidden.
+    \item \textbf{[55:63]} are ignored/reserved bits.
+\end{itemize}
+
+\begin{table}[]
+    \begin{center}
+    \begin{tabular}{|l|l|l|}
+    \hline
+    \rowcolor[HTML]{9B9B9B} 
+    AP{[}2:1{]} & Access from privileged EL & Access from EL0 \\ \hline
+    00          & Read and write            & Forbidden       \\ \hline
+    01          & Read and write            & Read and write  \\ \hline
+    10          & Read-only                 & Forbidden       \\ \hline
+    11          & Read-only                 & Read-only       \\ \hline
+    \end{tabular}
+    \caption[APBits]{Access Permission Bits values. similarly to \ref{tab:aptable},
+    the two bits 1 and 0 can be interpreted separately as write restriction for higher
+    exception level and access for \textbf{EL0}, respectively.}
+    \label{tab:apbits}
+\end{center}
+    \end{table}
+
+%TODO: immagine fig:desc2
+
+\section{Kernel Space Virtualization}
+\label{kernelvirt}
+In a tipical OS environment multiple processes run concurrently and use dynamically
+allocated memory and resources. The memory management unit serves to this purpose:
+every process have its own set of translation tables managed by the kernel and sees a 
+contiguous range of memory at its disposal. In this multitude of actors we can
+consider the kernel as a process in its own right, albeit of a superior kind; because
+it has no peers and often uses a static memory space the translation mechanism
+is meaningless, if not cumbersome, for him.
+
+To fix this situation the ARMv8 provides a number of features. One may intuitively
+imagine different page table references for each Exception Level, but this is 
+only partially the case. \textbf{EL0} and \textbf{EL1}, the main levels of operation
+for user processes and kernel, share in fact the same page table register 
+(\textbf{TTBR0\_EL1}): the register used to properly divide user and kernel pages 
+is \textbf{TTBR1\_EL1}. Like the latter, it holds the base address of a page table;
+while \textbf{TTBR0\_EL1} is used with any normal address resolution,
+ \textbf{TTBR1\_EL1} is selected when 16 most significant bits of the address 
+ are set to one, forming an address that would be absurdely big for any memory 
+ designed in the foreseeable future.
+
+ The kernel can then operate in this virtual memory range with a personal page
+ table (possibly as an identity transformation) while normal processes live in 
+ lower addresses of virtual memory. To accomodate the kernel in this inexistent
+ range the addresses in its code must be set properly. This would requires either
+ a linker script instructing to compile for memory starting at 
+ {\tt 0xFFFF00000000000000} (in which case the MMU must be configured and 
+ enabled immediatly) or compiling the code for relative branch instructions only.
+ The latter approach is considered easier as it works even if the MMU is disabled
+ and only requires the kernel entry point (the exception table) to be tweaked 
+ when address translation is eventually turned on.
+
+ As a side note, the condition to select the \textbf{TTBR1\_EL1} register can
+ be limited to the second most significant byte of the address set to {\tt 0xFF};
+ the first byte can then be freely used by the kernel software for personal 
+ purposes.
+
+ \begin{figure}[h]
+ \includegraphics[scale=0.6]{tesi11.png} 
+ \caption[Kernel memory virtualization]{In this image kernel and user spaces 
+ are positioned at the opposites of the address range but both are mapped in 
+ the same physical area.}\label{fig:exceptions}
+ \end{figure}
+ %16 ExbiByte
+
+
+ An example use case might be in support of object-oriented programming languages:
+ as well as having a pointer to an object, it might be necessary to keep a 
+reference count that keeps track of the number of references or pointers or handles
+ that refer to the object, for example, so that automatic garbage collection 
+ code can deallocate objects that are no longer referenced. This reference 
+ count can be stored as part of the tagged address rather than in a separate table, 
+speeding up the process of creating or destroying objects.
+
+\subsection{EL2 and EL3 Translation Process}
+The virtualization and secure levels have their own page tables. Since they act
+as overlay for one or more guest operating systems when enabled there are two translation
+stages: the first one is performed by the OS, using \textbf{TTBR\textit{n}\_EL1}
+as already explained; the result from this stage is then fed to a second stage,
+using tables found in \textbf{TTBR0\_EL2} and \textbf{TTBR0\_EL3}.
+
+Such complex tools are out of the scope of this work.
+
+
+\section{Translation Lookaside Buffer}
+\label{tlb}
+The Translation Lookaside Buffer (or TLB) is simply cached memory for address translation
+results: when a virtual address is to be translated the TLB is checked first;
+if the address is found (TLB hit) then the cached value is used. If not (TLB miss)
+a page table walk is performed and the result is stored in the TLB. Alternately,
+an MMU fault can be configured to fire.
+
+The TLB and MMU intertwined operation works very differently in ARM compared to 
+MIPSEL architecture and with an arguably easier approach for a novice. The TLB 
+component activity is almost invisible to the OS developer not caring for 
+particular performance optimizations, so it can be safely ignored. The only 
+essential part is the configuration of proper page tables for each process.
+
+\subsection{Trivial Approach}
+Once the MMU is activated and page tables are initialized the kernel must make 
+sure every process can only see its virtual memory share during its designated
+time slice. This can be achieved by creating a different page table per process
+and simply substituting it completely every time there is a context switch.
+A problem presents when a process asks for the same virtual address, that should
+however be translated in a different physical address, of one of its peers; 
+we shall call them process \textit{a} and \textit{b}.
+If the entry relative to \textit{a} is found in the TLB by \textit{b} its value
+will be returned without performing a page table walk, and will result in the
+wrong memory being accessed.
+
+Without delving too deeply into MMU operation, a simple solution will be to 
+flush the TLB cache every time there is a context switch. This will effectively
+deny most of the optimization brought by the cache, but will also prevent
+incorrect translations.
+
+\subsection{ASID Approach}
+A more elegant and efficient solution consists in using an Address Space ID (ASID)
+to keep track of process property in TLB entries. The ASID is arbitrarily assigned
+to processes by the kernel and stored in the two most significant bytes of either
+\textbf{TTBR0\_EL1} or \textbf{TTBR1\_EL1}
+When the non-global (\textit{nG}) field of a block entry in the page table is 
+set the current ASID is saved alongside the address in a TLB entry. Subsequent
+lookups for that address in the TLB cache only match if both the address and the
+saved ASID correspond to present values.
+
+% TODO: remember ttbcr; eventually describe MMU register configuration in greater
+% detail
+
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Overview of the BCM2837}
@@ -1116,7 +1444,7 @@ The serial configuration is the same as the UART0.
 The BCM2837 SoC has at least two devices acting as interrupt controllers. One of 
 them is clearly defined in the peripheral datasheet \cite{bcm2835}, while the
 other is not clearly named but hinted at thorugh register definition in a later 
-revision \cite{rev3.4}. Those are here arbitrarely named Base Interrupt Controller (BIC)
+revision \cite{rev3.4}. Those are here arbitrarily named Base Interrupt Controller (BIC)
 and Generic Interrupt Controller (GIC).
 These two interrupt controllers are cascaded, meaning that 64 interrupt lines are 
 wired to the BIC which in turn compresses them into 2 interrupt lines for the GIC
@@ -1512,6 +1840,8 @@ bare metal programming for the BCM2837 and ARM processors in general.
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Student's Perspective}
+
+\section{Memory Management Unit}
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Usage and Debugging}
