@@ -21,6 +21,10 @@
 \usepackage[table,xcdraw]{xcolor}
 \usepackage{multirow}
 \usepackage[bottom]{footmisc}
+\usepackage{enumitem}
+
+\setlist[description]{itemsep=-2mm,leftmargin=5mm}
+\setlist[enumerate]{itemsep=0mm}
 
 \oddsidemargin=30pt \evensidemargin=20pt%impostano i margini
 \hyphenation{sil-la-ba-zio-ne pa-ren-te-si}%serve per la sillabazione: tra parentesi 
@@ -823,12 +827,67 @@ system calls.
 Since those exceptions follow an instruction execution they are by definition
 synchronous.
 
-\section{Memory Attributes}
-\label{mair}
+\subsection{Caches}
+\label{cache}
+A cache is a block of memory with faster access than the memory normally used.
+Whenever the RAM is read the resulting value can be stored in this intermediate,
+efficient ephimeral storage unit; future references can then be extracted from 
+the cache instead (provided the original memory location was not modified) for
+a significant increase in performance.
+Since slower is normally cheaper, adding a small amount of high quality memory can
+speed up the whole system without having to use an expensive replacement.
+
+The ARMv8 specification defines three different cache levels; the processor can
+then implement an arbitrary number of them. The cache levels are distinguished 
+based on their position on the route from the single core to the external memory.
+
+ \begin{figure}[t]
+ \includegraphics[scale=0.6]{tesi12.png} 
+ \caption[Cache levels]{Position of different cache levels in the system.}\label{fig:cache}
+ \end{figure}
+
+ In figure \ref{fig:cache} we can see the disposition of the levels. The distance
+ from the core issuing a memory access is also an important factor in performance.
+When a core requires a memory location, the address is first searched for in 
+the level 1 cache, which is core specific and not shared. If nothing is found 
+the lookup continues hierarchically to the level 2 cache, which is shared among
+cores but internal to the processor. Another miss results in the third cache level,
+which is eventually external to the processor.
+
+A specialized device, the cache controller, ensures this search/update mechanism
+works smoothly. Care must be taken to avoid problematic coherency situations, where
+the content of caches and main memory differ.
+
+Since the objective of this work is to build an educational experience performance
+is not a relevant factor; therefore, caches are simply disable altogether.
+Yet a generic understanding of caching is required to correctly setup memory
+attributes when configuring the MMU.
 
 \section{Multiprocessor}
+Although not mandatory, the ARMv8 architecture is specifically structured to 
+host systems with more than one core, like the Cortex-A53 CPU.
+In a multicore environment each core has bot personal and shared resources:
+the registers (general purpose and system) are tipically duplicated and have a
+localized effect, while the main memory is shared by all cores at all times.
 
-\section{Security}
+Each core executes has its own execution thread, identical or different from 
+the others. The A-53 processor has a single clock input, so every core runs at
+the same frequency.
+% Instruction Level Parallelism?
+
+At a shallow level, the only register one should be concerned with when dealing 
+with parallelism is \textbf{MPIDR\_EL\textit{n}}. It contains the identifying number
+for both cluster and core that is currently executing; on the A-53 there is only
+one cluster and four cores (indexed from 0 to 3).
+
+When the reset interrupt is fired execution starts only for the first core; the
+remaning three are held in a waiting state (as if by executing a {\tt WFE} instruction).
+They can be woken up by executing a {\tt SEV} (send event) instruction, at which
+point execution starts at address {\tt 0x80000} for everyone else.
+The most immediate way to split execution into different threads is to check 
+\textbf{MPIDR} do a conditional branch. From there each core should be parked in 
+a spinlock, waiting to be released and directioned towards the code it should
+execute.
 
 \section{ARM Timer}
 
@@ -986,6 +1045,7 @@ following meaning:
 %TODO: immagine fig:desc1
 
 \subsection{Block Descriptors}
+\label{mmublock}
 Block descriptors represent direct access to a block of memory; when one is reached,
 it is the last stage of the translation process. They contain the following bit
 fields:
@@ -1050,6 +1110,97 @@ fields:
     \end{table}
 
 %TODO: immagine fig:desc2
+
+
+\section{Memory Types and Attributes}
+\label{mair}
+As previously mentioned the block and table descriptors contain information about
+what kind of memory they point to.
+Every memory address is one of two possible types: normal or device.
+Normal memory is the one used for most memory regions and where there can be 
+the most invasive optimizations. Normal memory can be heavily cached and is 
+considered to be weakly ordered: the actual number, time and order of access can 
+differ from the logical flow of the program without causing errors or problems.
+
+Device memory is used instead for memory mapped peripherals. When the subject is
+a device register the order of operations and even repeating the same instruction
+might yield unexpected side effects. Caching must be disabled too, as the content
+of a device bus is often non deterministic.
+Other than the memory type there are fine tuned attributes to distinguish
+what level of caching is allowed.
+
+\subsection{Shareability}
+In a multicore system the main memory is obviously shared among all the cores.
+This can lead to coherency problems in caches external to the single core (level 2
+and level 3, see section \ref{cache}). Hinting who is going to use a certain memory
+block can greatly help the system when managing caches, greatly improving performance
+and energy cost. There are three possible
+shareability options:
+\begin{description}
+    \item[Non-Shareable:] memory marked as non shareable is assumed to belong to
+        a single actor, thus synchronization of access from different cores is 
+        not needed.
+    \item[Inner Shareable:] this memory can be shared inside the processor (i.e. 
+        between the cores) but not outside of it (i.e. in the rest of the system).
+    \item[Outer Shareable:] an outer shareable domain is publicly available for 
+        every actor in the system and needs to be synchronized on each access.
+\end{description}
+The shareability attribute is found in the specific field of the block entry descriptor
+(see section \ref{mmublock})
+
+\subsection{Cache policies}
+When a cache search misses and the entry is not found, the respective cache is 
+updated with the value found on RAM. When the search is successful but and the
+operation is a write, deciding what location to update is not trivial. \\
+
+Regarding normal memory, the OS developer can specify cache policies as any combination
+of the following three classes:
+
+\begin{enumerate}
+    \item \textbf{Cacheability:} Non-Cacheable, Inner Cacheable or Outer Cacheable.
+    \item \textbf{Update policy:} Write Back or Write Through.
+    \item \textbf{Transient:} Transient or Non-Transient
+\end{enumerate}
+
+Different cacheability options were described in section \ref{cache}.\\
+When \textit{write back} memory locations are updated only the corresponding cache entry
+is modified and marked as dirty; external memory is updated only when the 
+line is evicted or explicitly cleaned.
+\textit{Write through} is instead a safer approach, where an update changes both the cache
+and the system memory.\\
+\textit{Transience} is an hint to the cache controller about how long an address should be 
+kept in cache for. This behaviour is implementation defined.\\
+
+Device memory is treated differently, and thus possesses its own set of attributes:
+\begin{enumerate}
+    \item \textbf{Gathering:} this property determines whether multiple accesses
+        can be merged into a single bus transaction for this memory region. If 
+        the address is marked as \textit{gathering} the processor can, for example, 
+        merge two byte writes into a single work half write.
+    \item \textbf{Reordering:} this determines whether accesses to the same 
+        device can be re-ordered with respect to each other. If the address is 
+        marked as \textit{non Re-ordering}, then accesses within the same block 
+        always appear on the bus in the order specified by the code.
+    \item \textbf{Early Write Acknowledgement:} This determines whether an 
+        intermediate write buffer between the processor and
+        the slave device being accessed is allowed to send an 
+        acknowledgement of a write completion.
+\end{enumerate}
+
+Refer to the Architectural Reference Manual \cite{armarm} for the exact values
+and codes of the memory attributes combinations.
+
+\subsection{MAIR Configuration}
+Due to the high number of possible combinations (many of which are problably 
+scarcely used), the memory attributes 
+configuration procedure follows a peculiar approach. Instead of having separate
+fields in the already filled block descriptor format, the programmer defines
+up to eight configurations coded with 8 bits each, which are then pushed into
+the \textbf{MAIR\_EL\textit{n}} register as if in an array.
+The block descriptor in turn has a 3 bit field that indexes which configuration
+to use in said array, in a two step process.
+
+
 
 \section{Kernel Space Virtualization}
 \label{kernelvirt}
@@ -1330,12 +1481,141 @@ the OS developer to see output displayed on screen.
 What follows is a list of all the peripherals used in the project with the core
 functioning (registers and command codes) explained for each of them.
 Device peripherals are connected to the ARM CPU through memory mapped I/O (MMIO);
-their registers and buses are mapped in RAM starting from address 0x3F000000,
+their registers and buses are mapped in RAM starting from address {\tt 0x3F000000},
 as if the main memory of the system extended beyond 1GiB.
+Only the peripherals that find a purpose in MaldOS will be explored here.
 
 \subsection{GPIO}
+The Rasbperry Pi 3 board contains 54 General Purpose Input Output pins, out of which
+only 26 are directly present on the 40 pin strip on the board. The ones that are
+missing serve either internal purposes (see section \ref{emmc}) or are not used
+altogether.
+
+Such a simple and low level peripheral is unlikely
+ to be included into an Operating System oriented project; nonetheless a simple yet effective 
+library was created when first approaching the hardware (blinking a light 
+is a close second to the obligatory ``Hello World'' example) and is still necessary
+to set up some other devices like the EMMC and UARTs.
+A brief description of the device's memory map is included for completeness.
+\\
+There are 13 different kinds or registers in this peripheral. To accomodate for
+54 GPIOs each register class can repeat a number of times, depending on how
+many bits are dedicated to a single pin (i.e. 3 bits per GPIO result into 6
+registers; a signle bit each can be covered by just two 32 bits registers).
+The GPIO memory map starts at address {\tt 0x3F200000}
+
+\begin{description}[itemsep=-1mm,leftmargin=5mm]
+    \item[Function Select:] GPIOs can have 8 possible functions: input, output and
+        ``alternate function \textit{n}'', for n spanning from 0 to 5. Alternate 
+        functions are relative to specific peripherals (see sections \ref{emmc} 
+        and \ref{uart}). The function is codified using 3 bits adequatly positioned
+        in the register (e.g. bits [0:2] of the first register refer to GPIO 0)
+    \item[Output Set:] when GPIO \textit{n} is configured as an output the \textit{nth}
+        bit of this register class can be set to pull high the corresponding
+        latch circuit. Writing 0 has no effect.
+    \item[Output Clear:] when GPIO \textit{n} is configured as an output the \textit{nth}
+        bit of this register class can be set to drive low the corresponding
+        latch circuit. Writing 0 has no effect.
+    \item[Pin Level:] read only register that yields a bitmap with the actual
+        voltage level registered in every pin.
+    \item[Event Detect Status:] bits in this register are set whenever an event
+        is detected. Events are configured by the following six registers.
+    \item[Rising Edge Detect Enable:] setting the \textit{nth} bit in this register
+        will result in the event detect status register being updated on a rising
+        edge (i.e. a transition from low to high voltage) for GPIO \textit{n}.
+    \item[Falling Edge Detect Enable:] setting the \textit{nth} bit in this register
+        will result in the event detect status register being updated on a falling
+        edge (i.e. a transition from high to low voltage) for GPIO \textit{n}.
+    \item[High Detect Enable:] this register ties a registered high level in a
+        GPIO to a value of 1 in the corresponding bit of the event detect status
+        register.
+    \item[Low Detect Enable:] this register ties a registered low level in a
+        GPIO to a value of 1 in the corresponding bit of the event detect status
+        register.
+    \item[asynchronous Rising Edge Detect Enable:] akin to the rising edge detect
+        register, but works asynchronously with respect to the system clock,
+        allowing to register faster transitions.
+    \item[Asynchronous Falling Edge Detect Enable:] akin to the falling edge detect
+        register, but works asynchronously with respect to the system clock,
+    \item[Pull Up/Down:] internal pull up or down register. Once a value is written
+        the actuation must be finalized with the next register.
+    \item[Pull Up/Down Clock:] after writing to the pull up/down register the
+        corresponding bit in this register must be swapped to ``clock in'' the
+        change.
+\end{description}
 
 \subsection{External Mass Media Controller}
+\label{emmc}
+The MultiMediaCard (MMC for short) is an open memory card standard used by the
+vast majority of devices and producers when adding considerable amounts of 
+storage to size-restricted solutions. The BCM2837 includes an MMC standard abiding
+controller provided by Arasan to access microSD cards, named External Mass Media Controller (EMMC)
+in the peripheral datasheet \cite{bcm2835}.
+
+The peripheral operates with a fair degree of autonomy from both the CPU and
+the GPU. It has a configurable clock separated from the board and is accessed
+through a set of memory mapped registers. The command set accepted by the controller
+has a direct reference to the MMC standard but the device also manages independently
+the most mundane operations (i.e. calculating cyclic redundancy checksum).
+
+The creation of a driver library for this kind of device is no trivial task; it 
+was kept as simple as possible and only made possible by existing examples
+with detailed explaination, in turn extracted from a reverse engineering effort
+of professional software (i.e. Raspbian and various RTOSes for Raspberry Pi).
+This is also due to the fact that the detailed description of the peripheral 
+should be found, according to Broadcom's documentation, in an elusive datasheet 
+(``SD3.0\_Host\_AHB\_eMMC4.4\_Usersguide\_ver5.9\_jan11\_10.pdf'') that instead is 
+not publicly distributed by Arasan (and thus should not have been mentioned in 
+the first place). Consequently the author has only a vague understanding of 
+how the controller actually works.
+
+For this reason rather than listing the registers and their function the explaination
+for this peripheral will follow the initialization and read/write procedures 
+of the MMC. It is by no means complete and should not be used as reference.
+
+\subsubsection{Initialization}
+First and foremost, the pins that are physically connected to the MMC interface
+must be properly set up; GPIOs 47 to 53 are set to alternate function number 3
+with an internall pull up attached. Those seven lines make up the serial interface
+to the media: one to distinguish between commands and data, one is the clock feed,
+one is used to detect whether a card is actually plugged in and the remaining four
+form up a nibble-sized parallel bus.
+On the controller side it is good practice to read as soon as possible the specification
+version of the controller, which can have significant differences in the command
+ protocol from one version to the next.
+Once the GPIOs are ready the controller should be reset and the clock speed initialized.
+After that there is a fixed sequence of commands to boot up the controller and
+have it ready to receive directives.
+
+In no particular order during this process interrupts should be enabled to 
+avoid euristic delays when waiting for a response. The device signals interrupt
+lines through a couple of dedicated registers that can be polled for activity. 
+It is unclear whether those same interrupts can be routed to the ARM handlers:
+to the best of the author's efforts it was not understood (and ultimately unnecessary
+for proper functioning of the system, given that the abstraction layer does not
+expose direct access the the EMMC).
+
+\subsubsection{SD Commands}
+Sending a specific command to the controller is in itself a complex routine. First,
+a status register should be inspected to check if the command line is still being
+used by a previous order; then the command code and arguments can be passed to 
+the corresponding registers.
+Finally the interrupt register must be polled to know precisely when the controller has
+finished elaborating and the response registers (16 bytes in total) can be 
+read to know the result.
+
+\subsubsection{Reading or Writing a Block}
+The microSD card is both read and written in 512 bytes long memory blocks. After
+checking if the data line is free via the status register the controller should
+be notified of the block size (512) and number that compose the data transfer.
+
+Different commands can be given to the controller depending whether the operation
+is a read or write and if it is comprised of one or multiple blocks; regardless,
+starting block index should be passed as argument. When everything
+is ready the data register can be read or written; each access will push the seek
+index forward by 8 bytes (the size of the register), and a final specific command
+will instruct the transfer to cease.
+
 
 \subsection{UART Serial Interface}
 There are two UART serial peripherals on board of the BCM2837: UART0 and UART1.
@@ -2008,8 +2288,37 @@ namely, a potent ARM CPU assisted by a graphical processing unit. In principle,
 the work that has been done for the British board could be easily ported to a 
 wide number of similar devices. The Pine64 family, for example, has recently
 marketed a laptop powered by one of their compute modules. Running a toy
-OS on a real laptop could be a even higher highlight for an undergraduate
-or even graduate student.
+OS on a real laptop could be both a more academically interesting exploit and
+ an higher highlight for an undergraduate (or even graduate) student.
+
+\section{Other Programming Languages}
+Traditionally, Operating System kernels are written in C with critical parts
+coded in Assembler. Some alternate higher level components using C-derived 
+languages like C++ (Windows and Android) and Objective-C (IOS).
+In the introduction some notable exceptions were mentioned: the Ultibo project 
+\cite{ultibo} is a Raspberry Pi hardware abstraction layer written entirely in 
+Pascal; when performance and resources are limited, one can find kernel written
+entirely in Assembler (like KolibriOS).
+
+Different programming languages obviously bring advantages and disadvantages,
+but in the scope of educational work the choice falls unambigously on pure C.
+It is the standard in Operating System development, and for good reasons:
+simplicity, ease of carrying on low level memory operations, huge community and
+learning reference, perfect balance between abstraction and hardware fidelity.
+
+Even beyond an academic objective, C is by far the dominant choice when it 
+comes to kernel development and has been for decades. There is, however, a
+contender that is recently emerging and gaining purchase thanks to its qualities
+like performance, reliability and security: Rust.\\
+Unlike the multitude of newly created programming languages of our time, Rust
+has quickly managed to carve a spot in embedded development. As of now, it is 
+already possible (and fairly easy) to run Rust code in various bare metal ARM
+environment, Raspberry Pi included.
+
+The main drawback lies in its inherent complexity: concepts like ownership and 
+parallelism take a great deal of effort befor mastering, and that would contrast
+with the focus on OS development of this work. Nevertheless, Rust is considered
+to be the closest second to C when it comes to the choice of programming language.
 
 \begin{thebibliography}{90}             %crea l'ambiente bibliografia
 \addcontentsline{toc}{chapter}{Bibliography}
