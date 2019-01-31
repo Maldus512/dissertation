@@ -1483,7 +1483,7 @@ functioning (registers and command codes) explained for each of them.
 Device peripherals are connected to the ARM CPU through memory mapped I/O (MMIO);
 their registers and buses are mapped in RAM starting from address {\tt 0x3F000000},
 as if the main memory of the system extended beyond 1GiB.
-Only the peripherals that find a purpose in MaldOS will be explored here.
+Only the peripherals that find a purpose in <name> will be explored here.
 
 \subsection{GPIO}
 The Rasbperry Pi 3 board contains 54 General Purpose Input Output pins, out of which
@@ -1931,18 +1931,26 @@ base address {\tt 0x0007F020}.
 \end{center}
 \end{table}
 
-\section{Tapes}
-Four instance of the tape device are supported. They are read only and work as if 
-queried through a DMA system.
-The tape can be viewed as a sequential list of 4KiB blocks. each block is marked 
-with a 4 bytes delimiter denoting the content of the underlying block.
+Interrupt lines for emulated devices are nothing more than an array at a specific
+memory address that is kept updated by the abstraction layer. Whenever an operation
+terminates a bit is set for the user to clear; until that happens interrupts will
+keep being raised in the form of a zero-delay timer (i.e. until there is an emulated
+interrupt line asserted se a timer for 0 microseconds in the future, ensuring
+the kernel responsability to clear it).\\
 
+The next sections are dedicated to the specific device classes. The interface and
+operating rules were copied almost identically from $\mu$MPS2, so the interested
+reader is redirected to its documentation for the details \cite{pop}; here are listed
+some implementation peculiarities and shortcomings for each type.
 
-\section{Disks}
+In addition to the commands defined in $\mu$MPS2 there is another recurring instruction,
+the \textbf{READ\_REGISTERS}, an alias for the value codified as {\tt 2}. This
+command is instantaneous in every case and simply copies the device registers into
+the structure specified in the mailbox. It substitutes reading the system registers
+without causing any effect on the peripheral.
 
-\section{Printers}
-
-
+The next chapter covers in greater detail the inner mechanisms of the emulated 
+devices.
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Project Internals}
@@ -2093,6 +2101,80 @@ The first step is the fast interrupt, and is present for every command. For long
 operations a timer is set to be executed by a normal interrupt after a certain amount
 of time.
 
+\subsection{Tapes and Disks}
+Tapes and Disks are very similar in their underlying functionality. While tapes 
+are read-only and are accessed in a sequential fashion, disks can be written and
+read at random. Their content is transferred as queried through a DMA system.
+The tape can be viewed as a sequential list of 4KiB blocks. Each block is followed
+by a marking 4 bytes delimiter denoting the content of the underlying block.
+The disk on the other hand has blocks organized with a three dimensional indexing
+that reproduces a head-cylinder-sector disposition.
+
+When a command is issued to the disk or tape device a FIQ for the first core is immediatly
+fired. Depending on the command it might be evaded immediatly or set a timer for
+later to emulate hardware delay; commands such as \textbf{RESET} and \textbf{ACK}
+finish on the spot, while operations like moving the device and reading/writing
+ a block are postponed for a few milliseconds.\\
+
+The actual content of both tapes and disks is saved as a file on the SD card. When the system 
+boots it looks for files named {\tt TAPEn} and {\tt DISKn}(where n is an index from 0 to 
+3) and considers them as installed. 
+The file format for a tape file is identical to the one used by $\mu$MPS2: 
+\begin{itemize}
+    \item Tapes have a 4-bytes identifier right at the beginning, then 
+        a list of 4 KiB blocks paired with yet another 4 bytes of ending marker.
+    \item Disks have different identifier at the start, then six 4-bytes configuration
+        words describing the number of cylinders, heads and sectors plus the rotation
+        speed, the seek speed and the data occupation ratio.
+\end{itemize}
+In fact, such files can be created and added to the microSD card using the same tool
+distributed with $\mu$MPS2, {\tt umps2-mkdev}.
+
+ \begin{figure}[t]
+    \begin{center}
+ \includegraphics[scale=0.65]{tesi13.png}
+ \caption[Execution thread]{The user provided kernel might realize there are some
+ ``gray zones'' in its execution time when the SD card is accessed. Proportions
+ in the figure are exaggerated.}
+ \label{fig:executionthread}
+    \end{center}
+ \end{figure}
+
+Thanks to the mailbox interface the illusion of a real hardware peripheral receiving
+orders and reporting with interrupts is almost perfect. The only real discrepancy
+is the Direct Memory Access function: from the student's perspective the device
+is writing or reading to or from the specified address; a scrupulous observer
+however may notice how the memory transfer operation is carried on instantaneously,
+and that there are comparatively big time gaps in kernel control when it happens,
+as depicted in figure \ref{fig:executionthread}.
+This is because the emulation layer takes place on the same execution thread of
+the kernel, forcing to share time and resources when the command is carried on.
+
+Overall, this should not be a major concern for a novice approaching OS development.
+
+\subsection{Printers}
+Printers devices are little more than an adaptation of the HDMI display port.
+The Videocore IV manages almost everything: it holds a block of memory designated
+as framebuffer to display on screen in its own memory space and allows the ARM
+CPU to modify it freely. A binary font is included in the {\tt .elf} file to 
+print textual information and the screen is divided in four sections for different
+printer instances.
+
+Printing a character merely writes it on screen, left to right and top to bottom.
+This is somewhat different from $\mu$MPS2, where printers more faithfully output
+their results to text files. To the author this approach seemed a little confusing,
+because it is not possible to view the output in real time and since other media
+devices are just files on the host filesystem they often felt like simplified 
+tapes. Moreover, having them on the microSD filesystem would increase the need
+for a more immediate access since the latter needs to be mounted before reading
+the output file.
+
+It would be indeed possible to flush printers on {\tt PRINTERn} files just like
+tapes and disks, but doing so would significantly complicate the small FAT32 
+library included in the project. Disk and tapes are arbitrarily big but have a
+statically allocated size: printers need to grow indefinitely, demanding a function
+to allocate more blocks on the file system.
+
 \subsection{Timer Queue}
 The second step of some device commands is scheduled for execution after a while;
 since there is only one timer in the system to fire scheduled interrupts, this would
@@ -2100,11 +2182,20 @@ eventually overwrite other pending timers (namely the process time slice).
 To prevent this internal timers uses a set of queue managing functions to 
 schedule multiple timers at once. The ROM function {\tt setTIMER()} itself
 just pushes a new timer onto the queue.
-
 The queue is kept ordered from the first timer that will occur to the last.
 When a interrupt is fired all the timers that were scheduled before the
 current time are popped out of the queue, and the first remaining element (if any)
 is scheduled again.
+
+The interrupt line of the ARM timer is actually tied to a class of devices that
+can be pushed into this timer queue. A new timer is pushed using {\tt setTIMER()}
+and the line is asserted when it is reached.
+
+Note that the {\tt setTIMER()} does not necessarily schedule the requested timer
+for an interrupt. First, it checks whether there are other, closer timers
+in the near future; then it also reads the emulated interrupt lines for pending
+interrupts: if there is one, a phony ``0 microseconds'' timer is scheduled to 
+ensure that those lines are serviced as soon as possible.
 
 Interestingly, the implementation of this module is heavily inspired by the 
 solution to phase 1 of the KayaOS project, covering process and semaphore queues.
@@ -2116,6 +2207,10 @@ the project, as the abstraction layer does not normally expose those functions
 (e.g. reading and writing the microSD card to emulate disk and tape devices).
 They could however be seen as one of the many educational examples about 
 bare metal programming for the BCM2837 and ARM processors in general.
+
+\section{FAT32 File System}
+Since disks and tapes devices are ``plugged'' into <name> as files on the microSD
+card, a small library capable of handling a FAT32 file system was developed.
 
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
@@ -2176,6 +2271,19 @@ Some examples found along the way are:
         Failing to set the device area as device memory will be forgiven on Qemu
         as there are no real peripherals; instead, the Raspberry Pi board will most likely
         not behave as expected.
+
+        %TODO: check if true
+    \item The translation lookaside buffer does not seem to be emulated 
+         faithfully on Qemu. One of the early
+        test about virtual memory conteplated a single process running with different
+        page tables from the kernel, at a lower exception level (\textbf{EL0}).
+        It was an inadequate attempt as both the process and kernel code where 
+        compiled in the same binary image, making memory separation impossible 
+        to begin with. In spite of that, the code ran fine on Qemu only to fail
+        on real hardware. It was later realized that the process \textbf{EL0} execution,
+        while trying to fetch the corresponding memory block, ended up using 
+        kernel table entries sill cached in the TLB (no ASID was used), thus
+        shifting the blame from faulty hardware to a falsely positive emulator.
     \item Qemu is whimsical about the memory address where to load the kernel image.
         The emulator's boot sequence is different from the real device as the
         {\tt kernel8.img} file is not read from the microSD card but passed from
@@ -2220,11 +2328,14 @@ ARM64 should be present within the toolchain used to compile the kernel.
  A simple command line client may attach using the following commands (assuming
  the {\tt aarch64-elf-gcc} toolchain is installed)
 
-\begin{lstlisting}
-aarch64-elf-gdb
-file output.elf
-target remote localhost:1234
+\begin{lstlisting}[label={lst:gdb}]
+$ aarch64-elf-gdb
+(gdb) file output.elf
+(gdb) target remote localhost:1234
 \end{lstlisting}
+
+This GDB initial configuration can be added to a {\tt .gdbinit}
+file for convenience to get automatically executed every time the debugger is run.\\
 
 Emulators like $\mu$MPS2 have the prominent advantage of a specifically designed
 running and debugging interface; nonetheless, a GDB server is a complete and
@@ -2237,6 +2348,30 @@ client (i.e. the one found within the ARM64 toochain); it acts as a web server
 reachable at the default port {\tt 5000} with any browser, and provides an intuitive
 interface fitted with step-by-step debugging, memory inspection, threaded view and
 so on.
+A {\tt .gdbinit} becomes especially useful when using Gdbgui as it is read even 
+when the debugger is executed through the Python wrapper.
+
+\subsection{Memory Management Unit}
+Special care should be taken when debugging with the MMU enabled. To accomodate
+virtual memory with ease of usage, the kernel image is loaded in physical address
+space and virtualized only later. As has already been explained, this is a somewhat
+uncharacteristic behaviour for a kernel, so support is not perfect.
+When MMU is enabled the entry point for interrupt handlers in the form of the
+\textbf{VBAR} register is shifted at address {\tt 0xFFFF000000000000}; the rest
+of the kernel only uses relative references, so everything works.
+However if the user is debugging the kernel he or she will become unable to break
+execution on kernel code; logically, having moved all addresses 16 ExbiByte forward
+GDB will have an hard time finding symbols. To fix references again one must
+load the elf symbol table with the same offset, using the following GDB command:
+
+\begin{lstlisting}
+(gdb) add-symbol-file output.elf 0xffff000000000000
+\end{lstlisting}
+
+Note that this directive too can be added to {\tt .gdbinit}. There is no 
+obvious drawback to loading the symbol table at two separate offsets (the first
+one being {\tt 0x0}); in this way breakpoints will work regardless of the MMU.
+
 
  \begin{figure}[t]
  \includegraphics[scale=0.34,angle=-90,origin=c]{tesi4.png}
@@ -2319,6 +2454,47 @@ The main drawback lies in its inherent complexity: concepts like ownership and
 parallelism take a great deal of effort befor mastering, and that would contrast
 with the focus on OS development of this work. Nevertheless, Rust is considered
 to be the closest second to C when it comes to the choice of programming language.
+
+\section{Emulation Layer on Videocore IV}
+Through the mailbox interface it is possible to ask the Broadcom GPU to directly
+execute code; this is what happens with graphical firmware routines in fully
+fledged Operating Systems like Raspbian.
+Initially code for the GPU was released only in binary form as proprietary 
+software; only in 2012 Broadcom gave in and documented open source firmware for 
+graphical processing. To this day a small component of proprietary binaries is 
+still necessary to boot the Raspberry Pi (for example, {\tt bootcode.bin}), although
+there are timid attempts at reverse engineering that as well.
+
+If the Videocore IV was freely available for the developer like the ARM CPU, part
+(if not the entirety) of the abstraction layer that is implemented as 
+\textit{interrupt-in-the-middle} could be moved there. The interface to access
+abstraction capabilities would not be much more convenient for the user, 
+as the communication media would still be mailboxes; it would however provide
+a more detailed emulation of hardware devices, for examble by acting as a real
+DMA peripheral when reading and writing to emulated disks and tapes.
+Students could write completely from scratch their Operating System, relying on 
+GPU firmware to assist them in more complex tasks like device communication and
+boot process.
+
+\section{Course Organization}
+<name> was developed to be of assistance for students. The focus is on an Operating
+Systems course, so effort was put into shaving off low level hardware interfacing
+and initialization: the objective is to learn how an OS works, not AArch64 Assembler
+instruction set and registers, or how to operate the Arasan EMMC controller.
+This approach however could be radically different depending on the subject under 
+scrutiny. Low level Assembler programming and the ARM64 architecture are interesting
+topics for a course in System Architectures. With enough time, will and coordination,
+the Kaya OS project could be build bottom-up by students in its entirety over four
+semester and two different courses: System Architectures for initialization and
+peripheral interfacing, and Operating Systems for the kernel and process management.
+
+In that scenario, <name> is not a support for students anymore, but a mere example
+and study on how to develop such an abstraction layer. Some sections would probably
+end up identical even when created by other developers (there are few alterations
+that can be made to the boot code, for example), but the interrupt handling in 
+particular would become much less arbitrarily complicated. 
+
+Overall, it would certainly be an extremely formative experience.
 
 \begin{thebibliography}{90}             %crea l'ambiente bibliografia
 \addcontentsline{toc}{chapter}{Bibliography}
