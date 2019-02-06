@@ -23,7 +23,7 @@
 \usepackage[bottom]{footmisc}
 \usepackage{enumitem}
 
-\setlist[description]{itemsep=-2mm,leftmargin=5mm}
+\setlist[description]{itemsep=-1.5mm,leftmargin=5mm}
 \setlist[enumerate]{itemsep=0mm}
 
 \oddsidemargin=30pt \evensidemargin=20pt%impostano i margini
@@ -101,12 +101,12 @@ anche nulla \ldots                      %\ldots lascia tre puntini
 \pagenumbering{roman}                   %serve per mettere i numeri romani
 \chapter*{Abstract}                 %crea l'introduzione (un capitolo
                                         %   non numerato)
-The course of Operative Systems is arguably one of the most crucial part of 
+The course of Operating Systems is arguably one of the most crucial part of 
 a computer science course. While it is safe to say a small minority of students
 will ever face the challenge to develop software below the OS level, the 
 understanding of its principles is paramount in the formation of a proper computer
 scientist.
-The theory behind operative systems is not a particularly complex topic. Ideas 
+The theory behind Operating Systems is not a particularly complex topic. Ideas 
 like process scheduling, execution levels and resource semaphores are intuitively
 grasped by students; yet mastering these notions thorugh abstract study alone
 will prove tedious if not impossible. 
@@ -171,7 +171,7 @@ INDICE}}
 \lhead[\fancyplain{}{\bfseries\thepage}]{\fancyplain{}{\bfseries\rightmark}}
 \pagenumbering{arabic}                  %mette i numeri arabi
 \section{Background}
-An operative system is, in a nutshell, a very complex and sophisticated program
+An Operating System is, in a nutshell, a very complex and sophisticated program
 that manages the resources of its host machine. Proper studying on the topic 
 should yield higher understanding on many fields of the likes of
 parallel programming, concurrency, data structures, security and 
@@ -200,7 +200,7 @@ To quickly recap the most notable mentions:
 \end{description}
 
 It is argued that the last approach is the most interesting and valuable for 
-the students. If they are to study an existing Operative System at all, it is
+the students. If they are to study an existing Operating System at all, it is
 either the case that said OS would be too complex or simple enough for them 
 to implement. In the first scenario the studying program must skip the most cumbersome
 parts and only cover what is essential, in which case the completeness 
@@ -341,7 +341,7 @@ Chapter 4 gives an overview of the System-on-Chip the Raspberry Pi 3 is built
 upon, with attention to the peripheral devices reputed most useful from an 
 educational perspective.
 
-Chapter 5 dwells on the implementation of mechanisms commonly used by an Operative
+Chapter 5 dwells on the implementation of mechanisms commonly used by an Operating
 System like context switch, scheduling, interrupt management and memory virtualization,
 which should be most interesting for students approaching this project.
 
@@ -499,7 +499,7 @@ non-injective, surjective mapping from processor modes to exception levels.
 
 \begin{figure}[t]
     \begin{center}
-\includegraphics[scale=0.6]{tesi7.png}
+\includegraphics[scale=0.6]{images/tesi7.png}
 \caption[ARMv8 Exception Levels]{ARMv8 Exception levels and their main purpose}\label{fig:armv8el}
     \end{center}
 \end{figure}
@@ -572,7 +572,7 @@ access to the lower (i.e. least significant) 32 bits of the register; the upper
 
 \begin{figure}[h]
     \begin{center}
-\includegraphics[scale=0.55]{tesi8.png}
+\includegraphics[scale=0.55]{images/tesi8.png}
 \caption[32 bit alias]{64 bit register with ``x'' and ``w'' access}\label{fig:32reg}
     \end{center}
 \end{figure}
@@ -606,7 +606,7 @@ There are 5 special registers:
 
 \begin{figure}[t]
     \begin{center}
-\includegraphics[scale=0.68]{tesi9.png}
+\includegraphics[scale=0.68]{images/tesi9.png}
 \caption[special registers]{AArch64 special registers}\label{fig:specialreg}
     \end{center}
 \end{figure}
@@ -781,7 +781,7 @@ cycle being executed by the core at any given time, they are classified as
 asynchronous exceptions.
 
  \begin{figure}[t]
- \includegraphics[scale=0.525]{tesi10.png} 
+ \includegraphics[scale=0.525]{images/tesi10.png} 
  \caption[Exceptions]{Tree of exception classes.}\label{fig:exceptions}
  \end{figure}
 
@@ -842,7 +842,7 @@ then implement an arbitrary number of them. The cache levels are distinguished
 based on their position on the route from the single core to the external memory.
 
  \begin{figure}[t]
- \includegraphics[scale=0.6]{tesi12.png} 
+ \includegraphics[scale=0.6]{images/tesi12.png} 
  \caption[Cache levels]{Position of different cache levels in the system.}\label{fig:cache}
  \end{figure}
 
@@ -890,9 +890,53 @@ a spinlock, waiting to be released and directioned towards the code it should
 execute.
 
 \section{ARM Timer}
+The Cortex A-53 implements a generic ARM timer interface that can be used for interrupts
+and time scheduling. Despite its apparently simple purpose this is a very convoluted
+internal device used to virtualize timers for guest OSes as well.
+Given such functions are not needed in this work, the explaination will focus 
+in the physical counter and interrupt setting registers.
+
+First of all, the timer must be initialized. It has a fixed running frequency
+of 62.5 MHz that increments a 64 bit counter on each tick, but by default the 
+timer registers cannot be accessed at lower 
+exception levels. Setting the proper bits of \textbf{CNTHCTL\_EL2} 
+and \textbf{CNTKCTL\_EL1} signal clearance of access from \textbf{EL2} 
+and \textbf{EL1} to lower levels, respectively.\\
+
+From there, every exception level (and each core) but \textbf{EL0} have its own timer to configure
+and use freely. Additionally, \textbf{EL1} and \textbf{EL2} can benefit from a
+virtual timer each, with a counter value equal to the physical one minus a 
+specified offset (register \textbf{CNTVOFF}), for a total of five channels.
+Each timer is controlled through four classes of registers:
+\begin{itemize}
+    \item \textbf{Control:} 32-bits registers named 
+        \textbf{CNT\textit{t}\_CTL\_EL\textit{n}}, where \textit{t} represents the
+        kind of timer (e.g. \textit{P} for physical, \textit{V} for virtual, 
+        \textit{H} for hypervisor) and
+        \textit{n} is the exception level. They only use 3 bits to determine whether
+        the timer is enabled, if the interrupt should be masked and if the condition
+        has been met (i.e. the time alarm has been reached).
+    \item \textbf{Counter:} the ever growing 64-bits counter register, 
+        named \textbf{CNT\textit{t}CT\_EL\textit{n}}.
+    \item \textbf{Compare Value:} \textbf{CNT\textit{t}\_CVAL\_EL\textit{n}}, holds
+        the compare value of the corresponding timer. The condition for the timer
+        is met when $Counter - CompareValue >= 0$.
+    \item \textbf{Timer Value:} \textbf{CNT\textit{t}\_TVAL\_EL\textit{n}}, is a
+        convenience 32-bits register for setting the next timer interrupt. On write,
+        the compare value is set to the current timer plus the written timer value.
+\end{itemize}
+
+The memory mapped generic interrupt controller can be used to decide which kind 
+of interrupt (IRQ or FIQ, if any) is fired on codition met. Then, an appropriate
+value can be loaded onto the timer value register, and eventually an exception will
+be fired. Timer interrupt lines are de-asserted either by setting a new timer
+in the future or by disabling the counter altogether.
+Even at the same exception level, physical and virtual timers have separate interrupt 
+lines.
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{The Memory Management Unit}
+\label{mmu}
 The Memory Management Unit is a device found in most CPUs tasked with the objective
 of translating virtual memory addressing with physical addressing. The Cortex-A53
 is no exception and has an advanced internal MMU. It is such an important part
@@ -1240,7 +1284,7 @@ while \textbf{TTBR0\_EL1} is used with any normal address resolution,
  purposes.
 
  \begin{figure}[h]
- \includegraphics[scale=0.6]{tesi11.png} 
+ \includegraphics[scale=0.6]{images/tesi11.png} 
  \caption[Kernel memory virtualization]{In this image kernel and user spaces 
  are positioned at the opposites of the address range but both are mapped in 
  the same physical area.}\label{fig:exceptions}
@@ -1353,7 +1397,7 @@ file (if present) and loads its parameters starting at address 0x100.
  Finally it does the same with the kernel image and passes control to the ARM CPU.
 
  \begin{figure}[t]
- \includegraphics[scale=0.6234]{tesi1.png}
+ \includegraphics[scale=0.6234]{images/tesi1.png}
  \caption[Figure 1]{Explanatory diagram on BMC2837 boot sequence}\label{fig:prima}
  \end{figure}
  \clearpage
@@ -1618,6 +1662,7 @@ will instruct the transfer to cease.
 
 
 \subsection{UART Serial Interface}
+\label{serial}
 There are two UART serial peripherals on board of the BCM2837: UART0 and UART1.
 They can both be connected to the same group of six GPIOs to relocate the 
 transmit and receive line; however, of those six pins only two (GPIO 14 and 15)
@@ -1639,7 +1684,7 @@ which is done entirely by the harware abstraction layer, they are left essential
  said registers, this complication should be easily overcome.
 
  \begin{figure}[t]
- \includegraphics[scale=0.143]{tesi2.jpg}
+ \includegraphics[scale=0.143]{images/tesi2.jpg}
  \caption[Figure 2]{Highlight of UART reserved GPIOs}\label{fig:seconda}
  \end{figure}
 
@@ -1732,7 +1777,7 @@ controller; additionally, the GIC also receives some interrupt lines from mailbo
 and USB.
 
  \begin{figure}[h]
- \includegraphics[scale=0.55]{tesi3.png}
+ \includegraphics[scale=0.55]{images/tesi3.png}
  \caption[Figure 3]{BCM2837 interrupt controllers configuration}\label{fig:interrupt}
  \end{figure}
 From a practical standpoint there are often serveral registers indicating which interrupt
@@ -1828,6 +1873,7 @@ in this work the emulation is carried on to the best level permitted by a bare
 metal environment, leaking some imperfections on the exposed controls.
 
 \section{Emulated Device Interface}
+\label{emulatedinterface}
 Initially emulated devices were made accessible via fake registers: simple pre-established
 memory locations that were frequently polled by the abstraction layer.
 Though most similar to the $\mu$MPS2 approach, this idea had significant flaws.
@@ -1864,7 +1910,7 @@ The upper 28 most significant bits should point to a 16-byte aligned address con
 a register structure for the selected device.
 
 \begin{figure}[h]
-\includegraphics[scale=0.571]{tesi5.png}
+\includegraphics[scale=0.571]{images/tesi5.png}
 \caption[Figure 5]{mailbox structure}\label{fig:mailbox}
 \end{figure}
 
@@ -1936,7 +1982,7 @@ memory address that is kept updated by the abstraction layer. Whenever an operat
 terminates a bit is set for the user to clear; until that happens interrupts will
 keep being raised in the form of a zero-delay timer (i.e. until there is an emulated
 interrupt line asserted se a timer for 0 microseconds in the future, ensuring
-the kernel responsability to clear it).\\
+the kernel responsibility to clear it).\\
 
 The next sections are dedicated to the specific device classes. The interface and
 operating rules were copied almost identically from $\mu$MPS2, so the interested
@@ -2072,7 +2118,7 @@ through an internal queue of virtual timers.
 
  \begin{figure}[h]
     \begin{center}
- \includegraphics[scale=0.8]{tesi6.png}
+ \includegraphics[scale=0.8]{images/tesi6.png}
  \caption[IRQ switch]{Interrupt handling schematic}\label{fig:irq}
     \end{center}
  \end{figure}
@@ -2082,6 +2128,7 @@ simpler, reduced to passing control to the user defined routine if present.
 
 
 \section{Emulated Devices}
+\label{emulateddev}
 The idea behind emulated peripherals and their fabricated interface 
 have already beed described in Chapter \ref{emulated}. Here we give a more detailed 
 presentation about the principle under which they work.
@@ -2132,7 +2179,7 @@ distributed with $\mu$MPS2, {\tt umps2-mkdev}.
 
  \begin{figure}[t]
     \begin{center}
- \includegraphics[scale=0.65]{tesi13.png}
+ \includegraphics[scale=0.65]{images/tesi13.png}
  \caption[Execution thread]{The user provided kernel might realize there are some
  ``gray zones'' in its execution time when the SD card is accessed. Proportions
  in the figure are exaggerated.}
@@ -2208,15 +2255,276 @@ the project, as the abstraction layer does not normally expose those functions
 They could however be seen as one of the many educational examples about 
 bare metal programming for the BCM2837 and ARM processors in general.
 
-\section{FAT32 File System}
-Since disks and tapes devices are ``plugged'' into <name> as files on the microSD
-card, a small library capable of handling a FAT32 file system was developed.
+Notably, since disk and tape devices are ``plugged'' into <name> as files onto
+the microSD, a small FAT32 file system library was necessary over the EMMC controller
+integration.
+The system expects a master boot record signaling a first FAT32 partition. There
+root entries (directory navigation is not supported) are listed and searched for
+the necessary \textit{DISKn} and \textit{TAPEn} files. Since both those device
+classes have a fixed size the library does not support file growth or shrinking,
+only read and write with eventual modifications.
+Partitions of any size permitted by FAT32 are accepted: the file allocation table
+is only partially loaded in main memory as a cache of cluster pointers.
 
+\section{Memory Management Unit}
+Using the MMU can be considered a higher level of complexity in its own right.
+One of the improvements brought by $\mu$MPS2 over $\mu$MPS was the possibility 
+of having it disabled for the first phases of the project, since the real 
+MIPSEL architecture had the virtuam memory translation constantly active.
+In truth, there is little reason in practice to turn off such a feature: a microprocessor
+is born to run an Operating System, and every Operating System worthy of it name
+virtualizes memory for its processes. A smoother learning curve is quickly 
+sacrified for the sake of efficiency.\\
+Possibily because ARM lives in a world closer to embedded, low power, low resources,
+time constrained applications, its MMU devices are usually activated on demand,
+which is why the first phases of Kaya are still possible on the Raspberry Pi 
+without having to worry about page tables.
+When activated, however, the MMU leaves little to no room for anything else: it 
+expects, from the very beginning of execution,
+ the kernel to be loaded starting from a special address to use a separate
+page table from normal processes. This proved hard to integrate with an abstraction
+layer that provides a great deal of initialization code without knowing whether
+virtual memory will be used.
+
+The solution is to move only the entry points of the user kernel, which are
+two: the interrupt address found in the \textbf{VBAR} register and the first
+{\tt LDST()} function call to launch the first user process. 
+On the interrupt table side the \textbf{initMMU()} function
+initializes system registers, disabling every cache and setting up for full
+range, 4KiB blocks page tables (using a simple identical mapping for the first
+translation function) and moves \textbf{VBAR} over to {\tt 0xFFFF000000000000},
+making sure that \textbf{TTBR1} is used when jumping to the kernel. If the handler
+is reached through that jump for all intents and purposes the kernel believes to 
+be running at the far end of the main memory.
+As for the first process context switch, it is a tricky situation: after enabling
+the MMU but before loading the process state the kernel is still using \textbf{TTBR0}
+because its entry point did not pass through the ``rigged'' \textbf{VBAR} register;
+therefore the TLB cache will contain entries from the kernel page table.
+The very last instruction before using {\tt eret} to switch to \textbf{EL0} loads
+the new \textbf{TTBR0}. Even so, the {\tt eret} instruction will fetch the
+new, user level page entry and cause an instruction abort for security reasons.
+To avoid this one must make sure to call {\tt LDST()} through \textbf{TTBR1},
+which can be achieved by jumping to the address of {\tt LDST} plus the most significant
+two bytes of the 64-bit register. In this way the kernel tables will be used 
+until the user process is actually running.\\
+Note that this problem should not present itself if the process' code is loaded
+in a different memory block. Nevertheless it is a theoretical inconsistency and
+should be considered.
+
+The only other alternative would be to pretend to load the entire binary at that
+address by specifying it in the linker script, and then setting up the MMU at 
+boot, before even jumping to C code. For reasons already listed, this was not
+acceptable.
+
+\subsection{Design Choices}
+While constructing the virtual memory environment the author came across design 
+crossroads where the decision was not driven by technical considerations, but
+rather educational ones.
+For example, the abstraction layer can let students avoid ASID management by 
+simply flushing the TLB cache every time there is a context switch; if not,
+failure to setup proper process IDs will result in abort exceptions. Ultimately 
+the latter approach was taken, leaving to the user to write a new ASID to 
+\textbf{TTBR0} every time a new process is launched.
+Again, user-defined handlers are written to special memory locations as addresses
+to jump to; if the MMU is active said addresses must be changed in order to 
+have the CPU refer to \textbf{TTBR1} instead of \textbf{TTBR0} when calling those
+functions. This nuisance can be handled automatically by the abstraction layer
+(and indeed it is in the final implementation), but one could instruct students
+to change the handler's address after enabling the MMU.
+
+Those choices are subjective and could be easily changed.
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Student's Perspective}
+This chapter describes what <name> exposes to a student to develop a toy OS:
+provided ROM functions and mapped memory addresses that were decided and defined
+taking inspiration from Kaya and $\mu$MPS2.
+Barring some minor details, the illusion of touching an ARM system directly should
+be be perfect for a novice. That being, said, ``jailbreaking'' out of <name> is 
+fairly easy; the abstraction layer relies on a good willed user to be used at 
+most efficiency.\\
+As a first, general rule, direct interaction with system registers is
+unnecessary (if not implicitly forbidden). Students can use a series of functions
+exposed by the abstraction layer to perform configuration and management.
+
+\section{ROM Functions}
+Strictly speaking, there is no Read Only Memory on the BCM2837. This section is 
+dubbed ``ROM Functions'' in reference to the precompiled routines provided as 
+object files by $\mu$UMPS2 and similar emulators.
+Those functions include:
+\begin{description}
+    \item[HALT()]: terminates the calling core execution, stopping in an endless loop.
+    \item[PANIC()]: similar to \textbf{HALT()}, prints a kernel panic message before
+        stopping.
+    \item[LDST(void *addr)]: Load State function call. Reads the address to load
+        a system state: general purpose and system registers to resume execution
+        of a saved process. Used by the kernel to context switch to a process.
+    \item[STST(void *addr)]: Store State function call. Writes the current execution
+        state to the specified address; used by the kernel to save the interrupted
+        process and resume it later. The saved state format is a structure (see
+         \ref{lst:state}).
+    \item[getCORE()]: returns the id of the core currently executing the function.
+        Its implementation simply reads the \textbf{MPIDR} register.
+    \item[getTOD()]: get Time of Day function. Returns the number of microseconds
+        elapsed since reset, reading it from the internal ARM
+        timer registers. Since the architecture is 64 bit, the returned value 
+        is a complete 64 bit {\tt unsigned long}, as opposed to the split 
+        \textbf{getTODLO()} and \textbf{getTODHI()} found in $\mu$MPS2's ROM.
+    \item[setTIMER(unsigned long us)]: a routine to set the next timer interrupt to 
+        be fired {\tt us} microseconds in the future.
+    \item[initMMU(unsigned long *table)]: function to initialize the memory 
+        management unit. Its argument is the initial page table to set to both
+        \textbf{TTBR0} and \textbf{TTBR1}; the kernel page table, so to speak.
+    \item[isMMUACTIVE()]: function returning either 1 or 0, depending whether
+        the MMU for the current core has been activated or not.
+    \item[SYSCALL(unsigned int, unsigned int, unsigned int, unsigned int)]:
+    function used to invoke a system call interrupt. In truth, nothing more than
+    the {\tt svc \#0} Assembler directive.
+\end{description}
+
+These functions are linked in the {\tt .elf} of the abstraction layer, thus can
+be simply referenced in the code after proper inclusion. When compiling separately a
+standalone executable to be loaded in RAM for the most advanced phases of Kaya
+this is not contemplated, as it would link the whole HAL to every binary.
+In this case it is left to the student to implement ROM functions: in reality, only
+\textbf{SYSCALL} is needed for a normal process, and it has a one line implementation.
+
+\begin{lstlisting}[label={lst:state},caption={Process state format},language=C]
+typedef struct _state_t {
+    uint64_t general_purpose_registers[29];
+    uint64_t frame_pointer;
+    uint64_t link_register;
+    uint64_t stack_pointer;
+    uint64_t exception_link_register;
+    uint64_t TTBR0;
+    uint32_t status_register;
+} state_t;
+\end{lstlisting}
+
+\section{System Initialization}
+The student's kernel entry point is the {\tt main} function. The first task of 
+the Operating System should be populating the custom interrupt routines: contrarily 
+to $\mu$MPS2 interrupt handlers are not specified with a full process state, but
+condensed into just the function and the stack pointer. The function pointer must
+be loaded into the {\tt \_HANDLER} locations, while the stack pointer is higher 
+up and there is one for each core. There are no separate stack pointer for different
+exceptions: if an exception is fired from the kernel handler, the stack pointer
+is kept the same.
+An example of initialization sequence could be
+\begin{lstlisting}[language=C]
+*((uint64_t *)INTERRUPT_HANDLER)   = (uint64_t)&interrupt;
+*((uint64_t *)SYNCHRONOUS_HANDLER) = (uint64_t)&synchronous;
+*((uint64_t *)KERNEL_CORE0_SP)     = (uint64_t)0x1000000;
+*((uint64_t *)KERNEL_CORE1_SP)     = (uint64_t)0x1002000;
+*((uint64_t *)KERNEL_CORE2_SP)     = (uint64_t)0x1004000;
+*((uint64_t *)KERNEL_CORE3_SP)     = (uint64_t)0x1006000;
+\end{lstlisting}
+
+After this, the first process should be created and loaded with a proper time
+slice set as timer interrupt. The memory address from where processes can use 
+stack starts where the kernel ends; said value is provided for convenience by 
+the {\tt \_kernel\_memory\_end}, defined in the linker script.
+
+ \begin{figure}[ht]
+    \begin{center}
+ \includegraphics[scale=0.55]{images/tesi14.png}
+ \caption[Memory Map]{Memory locations for interrupt old areas, handlers 
+ and stack pointers}\label{fig:memmap}
+    \end{center}
+ \end{figure}
+
+\section{Exceptions}
+By default, exceptions are handled at \textbf{EL1}. Control is given to the 
+specified handler with normal interrupts disabled but fast IRQs enabled; the user
+is not supposed to change this settings, and doing so might result in untested
+behaviour.
+Thus, nested interrupts are not present. Interrupt exceptions are fired
+for the student's kernel if a physical device requires it (UART) or if an 
+emulated device is asserting its line; while an interrupt line (real or 
+emulated) is pending and not masked the interrupt handler will be called repeatedly
+until it is properly acknowledged.
+Since interrupt lines for emulated devices are nothing more than RAM locations
+it is possible to forcibly deassert them by simply writing 0 instead of using
+the provided \textbf{ACK} command. This should not be done and can lead to 
+unpredictable outcomes.
+
+Synchronous exceptions (namely, system calls) are very simple; on {\tt SVC} 
+instruction the provided handler is called, and parameters can be passed using
+general purpose registers. In fact, to properly return a value from a system call
+the state saved in the corresponding oldarea must be loaded with a modified 
+{\tt X0} register.\\
+
+Abort exceptions work similarly. Note however that unlike $\mu$MPS2, where TLB
+faults were part of the normal workflow, <name> does not contemplate recoverable
+aborts. The abort handler is however generic, and the possibility is not ruled
+out.
+
+Whenever an exception is fired, the handler is loaded using the specified stack
+pointer for \textbf{EL1} and the executing core; if an exception condition happens
+while at \textbf{EL1} (e.g. an abort or a system call, even if it does not make 
+sense to invoke one when at kernel level) the stack pointer is kept the same
+and grows from where it was left.
+
+\section{Multicore}
+<name> approach to multicore functionality is very simple. Exception handlers 
+are shared among all cores, leaving to the user the responsibility to separate
+routines based on the executing actor. Old areas where states are saved and stack
+pointers on the other hand are defined in a per-core basis. Every core can have
+its exceptions and handle them accordingly.
+
+Inter Processor Interrupts (IPI) are completely transparent and work as defined
+by the ARMv8 specification. The only exception is the first mailbox of the first
+core, reserved for emulated peripheral management. Data written to this mailbox
+is interpreted as a pointer to a device registers-holding structure and is not
+controlled by the student provided kernel.
+Other mailboxes on the other hand will immediatly cause an interrupt in the
+corresponding core. Mailbox interrupts must be cleared by writing the same data
+in the write-clear register.
+
+\section{Devices}
+The student can use two classes of devices on <name>: emulated or real peripherals.
+
+\subsection{Real Peripherals}
+The only real peripherals accessible from the abstraction layer are the two 
+built in serial interfaces, UART0 and UART1.
+Section \ref{serial} describes in greater detail the register configuration for
+said devices. Although clearly more complex and convoluted when compared to the
+clean interface for $\mu$MPS2 emulated devices, it is believed the handful of 
+registers needed to use UART1 and UART0 is still well within reach for a cumputer
+science undergraduate student. Similarly to flying a plane, the hardest
+part is taking off, and device initialization is already prepared by the abstraction
+layer when the user kernel gains control.\\
+Interrupt handling is self contained in specific device registers; once enabled
+the exception routine will behave as expected, continously being called until 
+the specific acknowledgement is delivered.
+
+\subsection{Emulated Peripherals}
+The emulated peripherals interface is kept almost identical to the $\mu$MPS2 
+approach, and is detailed in sections \ref{emulated} and \ref{emulateddev}.
+As mentioned before the commands are passed to the emulation layer with a memory
+structure shared through the first core's first mailbox (unavailable for other
+purposes). The memory address must be 16-bytes aligned, as the 4 least significant
+bits are used to index the device the command is meant for.
 
 \section{Memory Management Unit}
+The MMU operation is described in depth in chapter \ref{mmu}. It is a complex 
+device, unsuitable for undergradates. However this complexity is, in the author's opinion,
+very much intrinsic in the nature of virtual memory management, and little can
+be done to ease it; even if possible it would not make sense to further semplify it, as 
+it would lose most of its value.
+Therefore, the MMU interface has been left mostly untouched by the abstraction layer.
+The sole real interference is copying \textbf{TTBR1} into \textbf{TTBR0} when 
+handling an exception to make sure the memory can be accessed without trouble 
+even at \textbf{EL1}. If this was not the case the kernel could end up receiving 
+entry results of the process that was paused.
+Other than that, ASIDs and page tables are entirely managed by the user. Still,
+registers should not be directly accessed and instead modified only through 
+{\tt initMMU()} and {\tt isMMUACTIVE()} ROM functions.
+
+Note that the memory management unit configuration is set on a per-core basis:
+there can be cores where virtual memory is enabled and active, and others where
+normal physical memory is used.
+
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Usage and Debugging}
@@ -2271,19 +2579,6 @@ Some examples found along the way are:
         Failing to set the device area as device memory will be forgiven on Qemu
         as there are no real peripherals; instead, the Raspberry Pi board will most likely
         not behave as expected.
-
-        %TODO: check if true
-    \item The translation lookaside buffer does not seem to be emulated 
-         faithfully on Qemu. One of the early
-        test about virtual memory conteplated a single process running with different
-        page tables from the kernel, at a lower exception level (\textbf{EL0}).
-        It was an inadequate attempt as both the process and kernel code where 
-        compiled in the same binary image, making memory separation impossible 
-        to begin with. In spite of that, the code ran fine on Qemu only to fail
-        on real hardware. It was later realized that the process \textbf{EL0} execution,
-        while trying to fetch the corresponding memory block, ended up using 
-        kernel table entries sill cached in the TLB (no ASID was used), thus
-        shifting the blame from faulty hardware to a falsely positive emulator.
     \item Qemu is whimsical about the memory address where to load the kernel image.
         The emulator's boot sequence is different from the real device as the
         {\tt kernel8.img} file is not read from the microSD card but passed from
@@ -2291,6 +2586,60 @@ Some examples found along the way are:
         {\tt 0x80000}; if that is not the same address referenced by the linker
         script the kernel will fail to run.
 \end{itemize}
+
+Note that, beside those immediate differences, emulator and hardware can behave
+differently while still being both correct. Quoting a Qemu developer,
+
+\begin{quote}
+\textit{``QEMU only promises to run architecturally correct code the
+way the architecture says it should run. It doesn't guarantee to
+run incorrect code in the same way the hardware happens to run it.
+QEMU aims to be an architecturally valid implementation, not
+an implementation that matches the real hardware CPU. (That is, we are
+free to behave differently for things which the architecture manual
+defines as IMPLEMENTATION DEFINED or UNPREDICTABLE.)''}
+\end{quote}
+
+One brilliant example of this situation can be found in TLB behaviour. A cached
+page table entry can live inside the TLB for an arbitrary amount of time, extremities
+included: it is architecturally correct \textbf{both} immediately discard it or 
+keep it forever. 
+In an early test of virtual memory translation, a single process was made to run
+at \textbf{EL0} after being launched by the kernel from \textbf{EL1}. Kernel and
+process code were part of the same executable, and thus shared the same memory block.
+Two page tables were set up for the kernel and the process; they had to be different
+to allow correct execution permissions: the processes' entries had the \textbf{AP}
+field set to no limit, while the kernel ones restricted \textbf{EL0} access 
+\footnote{Note that, by default, a memory block that is not restricted for 
+\textbf{EL0} write access \textbf{cannot} be executed by higher exception levels
+due to obvious security concerns.}.
+At first no ASID was used, and the same binary image was running fine on Qemu 
+but not on real hardware. The reason for the hardware fault was found in the presence
+of stale entries in the TLB: initially kernel entries were cached; when the process
+was launched it tried to fetch the same memory block as the kernel, hitting a
+cached version that forbade \textbf{EL0} access, thus resulting in an instruction
+abort.
+On the other hand, Qemu was running fine because it does not faithfully emulate
+the TLB. When any \textbf{TTBR} register changes the entire TLB cache is flushed
+behind the scenes, immediately deleting any stale entry.
+The code was wrong, but it happened to run anyway on the emulator.
+
+To fix the example ASID were used, setting a different ID for kernel and process
+tables. This time however the parts were inverted: the real Raspberry Pi 3 board
+started working while Qemu was constantly stuck into abort exceptions.
+Again, the bug was due to the same TLB difference: between swapping \textbf{TTBR0}
+with \textbf{EL0} process tables and actually switching the context there were 
+some instructions at \textbf{EL1}. For those, fetching a virtual page entry 
+yielded a TLB miss because the ASID had changed, so a new entry from the 
+process' table was returned, leading to yet another permission fault.
+On the Raspberry Pi 3 the same code still ran fine, probably because the change
+in \textbf{TTBR0} had yet to be registered before the context switch and the
+kernel was still hitting the correct TLB cached entries.
+The final solution was to run the kernel code at address {\tt 0xFFFF000000000000}
+to make sure \textbf{TTBR1} was always used.\\
+
+%TODO: image
+
 
 Qemu requires a kernel image and a microSD card image to be passed as command
 line arguments. An example command to run the emulator is:
@@ -2374,7 +2723,7 @@ one being {\tt 0x0}); in this way breakpoints will work regardless of the MMU.
 
 
  \begin{figure}[t]
- \includegraphics[scale=0.34,angle=-90,origin=c]{tesi4.png}
+ \includegraphics[scale=0.34,angle=-90,origin=c]{images/tesi4.png}
  \caption[Figure 4]{gdbgui browser interface}\label{fig:gdbgui}
  \end{figure}
 
