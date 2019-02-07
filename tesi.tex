@@ -109,8 +109,7 @@ scientist.
 The theory behind Operating Systems is not a particularly complex topic. Ideas 
 like process scheduling, execution levels and resource semaphores are intuitively
 grasped by students; yet mastering these notions thorugh abstract study alone
-will prove tedious if not impossible. 
-
+will prove tedious if not impossible.\\
 Devising a practical - albeit simplified - implementation of said notions can
 go a long way in helping students to really understand the underlying workflow
 of the processor as a whole in all its nuances. 
@@ -120,15 +119,14 @@ an already existing one. The complexity of real-world hardware
  goes way beyond what students are required to learn, which makes hard to
  find a proper machine architecture to run the project on.
 
-This work is heavily inspired by uMPS2 (and uARM), a previous solution to this problem:
+This work is heavily inspired by $\mu$MPS2 (and $\mu$ARM), a previous solution to this problem:
  an emulator for the MPIS R3000 processor. By working on a virtual and simplified
  version of the hardware many of the unnecessary tangles are stripped away while
  still mantaining the core concepts of OS development.
-Although inspired by a real architecture (MIPS), uMPS2 is still an abstract 
+Although inspired by a real architecture (MIPS), $mu$MPS2 is still an abstract 
 environment; this allows the students' work to be controlled and directed,
  but might leave some of them with a feeling of detachment from reality
  (as was the case for the author).
-
 What is argued in this thesis is that a similar project can be developed
 on real hardware without becoming too complicated. The designed architecture
 is ARMv8, more modern and widespread, in the form of the Raspberry Pi education
@@ -136,7 +134,7 @@ board.
 
 The result of this work is dual: on one side there was a thorough study on
 how to develop a basic OS on the Raspberry Pi 3, a knowledge that is
-as of now not properly documented for those not prepared on the topic; using
+as of now not properly documented for those unprepared on the topic; using
 this knowledge an hardware abstraction layer has been developed for 
 initialization and usage of various hardware peripherals, allowing users
 to buid a toy OS on top of it.
@@ -177,7 +175,7 @@ should yield higher understanding on many fields of the likes of
 parallel programming, concurrency, data structures, security and 
 code management in general.
 
-As previously mentioned, an Operating Systems course should ideally include
+As mentioned in the abstract, an Operating Systems course should ideally include
 field work. This can be done through several different approaches, which
 have already been covered by previous works like $\mu$ARM and $\mu$MPS
 \cite{tesijonjic} \cite{tesimelletti}.
@@ -2097,6 +2095,7 @@ From there control is passed to C, with another series of initialization routine
 \end{enumerate}
 
 \section{Interrupt Management}
+\label{regcorruption}
 The core of the abstraction layer lies in the interrupt handling routines. We refer
 to the handlers predefined in the abstraction layer as internal interrupt handlers;
  the students should define their own handlers, from now on referred to as user defined handlers.
@@ -2123,9 +2122,21 @@ through an internal queue of virtual timers.
     \end{center}
  \end{figure}
 
+ %TODO: fix everything
+
 Other exception handlers, like the synchronous exception handler, are even 
 simpler, reduced to passing control to the user defined routine if present.
 
+The abstraction layer does mainly two things before passing control to the user:
+\begin{enumerate}
+    \item setting the stack pointer to a specified value for each core.
+    \item setting \textbf{TTBR0} to the kernel page table, giving the illusion
+        of different page tables for different exception levels, which simplifies
+        significantly the whole virtual memory system.
+\end{enumerate}
+This meddling has a relatively negligible drawback: the interrupt routine is forced
+to corrupt two general purpose registers. The conscribed registers are \textbf{X27}
+and \textbf{X28}, and they should not be used for other purposes.
 
 \section{Emulated Devices}
 \label{emulateddev}
@@ -2547,6 +2558,51 @@ custom package like the $\mu$MPS2 emulator to install; instead the user needs
 a proper cross compile toolchain for ARM64 (or an ARM64 device, like the Raspberry
 Pi itself) and eventually Qemu.
 
+\section{Compiling}
+<name> provides a single {\tt .elf} file containing initialization code, abstraction
+layer and some functions; given that, there are several ways to compile it 
+into a project. Here an example is shown, where a single module contaning the {\tt main}
+function is linked to the HAL.
+
+\begin{lstlisting}[language=bash]
+$ aarch64-linux-gnu-gcc -o main.o -c -Wall -ffreestanding \\
+    -nostdlib -nostartfiles -O0 -g -march=armv8-a \\
+    -mtune=cortex-a53 -fPIE -ffixed-x27 -ffixed-x28 \\
+    -Iinclude/app main.c
+$ aarch64-linux-gnu-ld -o app.elf -r main.o$
+\end{lstlisting}
+
+Each command option has its own meaning:
+\begin{description}
+    \item[-Wall] requires to print all warnings during compilation. Not Strictly
+        necessary, but good practice.
+    \item[-ffreestanding] assert that compilation targets a freestanding 
+        environment, one in which the standard library may not exist and program 
+        startup may not necessarily be at main.
+    \item[-nostdlib] instructs not to use the standard system startup files or 
+        libraries when linking.
+    \item[-nostartfiles] commands not to use the standard system startup 
+        files when linking.
+    \item[-O0] is the optimization level; here it is 0, with no optimization at all.
+        One might specify other levels, but in a project where the focus is on 
+        the learning experience and not in performance compiler meddling should 
+        be kept to a minimum
+    \item[-g] includes debugging symbols into the executable.
+    \item[-march=aromv8-a] specifies the target architecture.
+    \item[-mtune=cortex-a53] specifies the target processor.
+    \item[-fPIE] generates position independent code; it is necessary for when
+        the executable will be linked with the abstraction layer in the next step.
+    \item[-ffixed-x27 -ffixed-x28] instucts the Assembler generator to avoid using
+        general purpose registers \textbf{X27} and \textbf{X28}. 
+        As described in section \ref{regcorruption}
+        those are corrupted during context switch, and thus are not available.
+\end{description}
+
+Unless otherwise specified, all options are strictly necessary for a working 
+result. The absence of some flags might not create immediate issues but are 
+nevertheless to be considered a mistake (e.g. registers \textbf{X27} and \textbf{X28}
+are rarely used).
+
 Given a compiled elf with the user's code called {\tt app.elf} and assuming to
 use {\tt aarch64-elf-gcc} as a cross compiler, the process to create a kernel image
 would be 
@@ -2556,7 +2612,7 @@ aarch64-elf-ld -nostdlib -nostartfiles -Thal.ld \
 aarch64-elf-objcopy output.elf -O binary kernel8.img
 \end{lstlisting}
 The resulting binary can then be placed on a microSD card and run on a Raspberry Pi 3
-or on Qemu
+or on Qemu.
 
 \section{Qemu}
 Since version 2.12 Qemu supports a Raspberry Pi 3 emulated machine.
