@@ -23,7 +23,8 @@
 \usepackage[bottom]{footmisc}
 \usepackage{enumitem}
 
-\setlist[description]{itemsep=-1.5mm,leftmargin=5mm}
+\setlist[description]{itemsep=-1mm,leftmargin=5mm}
+\setlist[itemize]{itemsep=0mm}
 \setlist[enumerate]{itemsep=0mm}
 
 \oddsidemargin=30pt \evensidemargin=20pt%impostano i margini
@@ -177,28 +178,33 @@ code management in general.
 
 As mentioned in the abstract, an Operating Systems course should ideally include
 field work. This can be done through several different approaches, which
-have already been covered by previous works like $\mu$ARM and $\mu$MPS
+have already been covered by previous works like $\mu$ARM and $\mu$MPS2
 \cite{tesijonjic} \cite{tesimelletti}.
 To quickly recap the most notable mentions:
 \begin{description}
-    \item[Study of an existing OS] the most theoretical approach, it involves
+    \item[Study of an existing OS:] the most theoretical approach, it involves
         reading and analyzing the source code. There is no short supply of such
         examples; historically Minix is cited \cite{minix}, but a quick research
-        will reveal countless small kernels for embedded platforms and emulators.
-        The biggest downside to this approach is that the esamination of the source
+        will reveal countless small kernels for embedded platforms and emulators.\\
+        The biggest downside of this approach is that the esamination of the source
         code may end up not having more educational value than a pseudocode snippet
         found in the textbook. The fact that the example is indeed practical is 
         lost in the lack of application by the student.
-    \item[Modification of an existing OS] this approach can be seen as a slight
+    \item[Modification of an existing OS:] this approach can be seen as a slight
         revision to the study-only policy. If the work under examination can indeed
-        be run in some environment, students might find themselves modifying small
-        parts even if unprompted by the professor.
-    \item[Construction from scratch] this is the idea behind projects $\mu$MPS, 
+        be run in some environment, students might find themselves modifying 
+        and testing small parts even if unprompted by the professor.
+    \item[Construction from scratch:] this is the idea behind projects $\mu$MPS, 
         $\mu$MPS2, $\mu$ARM and the KayaOS specification \cite{davolimorsiani}.
+        Creating an entire OS will be undoubtedly be the most formative experience
+        as it leaves no room for holes in preparation when implementing the
+        studied solutions. Its biggest downside is the risk of being too much
+        for undergradates to handle, only resulting in a critical hit to their
+        self confidence.
 \end{description}
 
 It is argued that the last approach is the most interesting and valuable for 
-the students. If they are to study an existing Operating System at all, it is
+the students: if they are to study an existing Operating System at all, it is
 either the case that said OS would be too complex or simple enough for them 
 to implement. In the first scenario the studying program must skip the most cumbersome
 parts and only cover what is essential, in which case the completeness 
@@ -228,27 +234,39 @@ on the attained result, which is limited to a relatively small niche.
 The software itself may be compiled for a real architecture, but the final binary
 can only run on the simplified emulator, making it a trial for its own sake.
 
-The final end of $\mu$MPS is, in fact, learning, so this is not really a shortcoming.
+To be fair the final end of $\mu$MPS is, in fact, learning, so this is not really a shortcoming.
 What is attemped with this work is to take a small step towards concreteness in 
 the aforementioned balance without falling into a pit of unnecessary complexity.
 The occasion to do so is presented by the rise of a widespread and relatively
-clean architecture: ARMv8, specifically using the Raspberry Pi 3 educational board.
+clean architecture: ARMv8, specifically using the Raspberry Pi 3 educational board
+and the Qemu architecture emulator.
 
 \subsection{ARMv8 and Raspberry Pi}
-The passage from MIPSEL to ARM is not new to $\mu$MPS; the previous work
+The passage from MIPSEL to ARM is not new to the $\mu$MPS family of emulators; 
+the previous work
 of $\mu$ARM was already pointed in this direction. $\mu$ARM had the goal to
-modernize the $\mu$MPS experience, thus maintaing its emulator-only approach.
+modernize the $\mu$MPS experience and still maintained its emulator-only approach.
 In fact, when this work started the goal was to create an hardware abstraction
 layer to be able to run an $\mu$ARM project on Raspberry Pi (which 
 coincidentally has an ARMv7 core for the model 2).
-<mipsel is outdated>
-The ARMv8 architecture choice fixes most of the problems that previously arose while
+
+In general, the MIPSEL architecture is losing more and more market ground as time
+passes. Two of its main features were being a 64-bits architecture and a faily simple
+one on top of that; the coming of ARMv8 superseded both aspects. Although it made
+history with successful devices like the original Playstation and Nintendo64 consoles,
+in the last decade MIPSEL processors found few practical applications (with the notable 
+exception of the computer vision chip on the Tesla Model S).
+This considerations were valid when $\mu$ARM vas conceived and obviously still stand.\\
+
+Moreover, the ARMv8 architecture choice fixes most of the problems that 
+previously arose while
 considering real hardware as an environment:
 \begin{itemize}
     \item \textbf{Widespread use}: the success of the ARM architecture in general
-            make it an interesting candidate for an undergraduate project; specifically,
-            it is used by the whole Raspberry Pi family of educational boards, which
-            needs no introduction. Today, one can reasonably assume that an undergraduate
+            makes it an interesting candidate for an undergraduate project; specifically,
+            it is used by the whole Raspberry Pi family of educational boards (which
+            needs no introduction), but also by a vast and growing majority of all mobile 
+            devices. Today, one can reasonably assume that an undergraduate
             student will know what a Raspberry Pi is at least by the end of his or her
             course of study.
     \item \textbf{Simplicity}: it will be argued over the dissertation that the
@@ -257,41 +275,45 @@ considering real hardware as an environment:
     \item \textbf{Future prospect}: More and more devices are running on ARM.
             The smartphone market is almost entirely dominated by the family of
             processors, which is now expanding into notebooks and other handheld/
-            wearable/portable devices.
-            Having an - albeit small - experience in the field can prove useful
+            wearable/portable appliances.
+            Having an experience - albeit small - in the field can prove useful
             for some students.
 \end{itemize}
 Being able to run on a real device is an added satisfaction but is mostly a 
 nuisance during the development process, which is yet another problem that 
-had been solved by $\mu$MPS. Recently however an official patch has been
-added to qemu that allows to emulate a Raspberry Pi 3 board and debug the software
+had been solved by $\mu$MPS2. Recently however an official patch has been
+added to the Qemu emulator that allows to emulate a Raspberry Pi 3 board and 
+debug the running software
 with GDB. Working with Qemu and GDB brings, in the author's perspective, the
-added advantage of interacting with comprehensive and popular tools instead of 
+important advantage of interacting with comprehensive and popular tools instead of 
 a niche academic emulator, provided that said tools are sufficiently apt for
 the task. 
 
 
 \subsection{Kaya}
 The end result is an hardware abstraction layer compiled for 64-bits ARMv8
-architecture to be linked with the student's work, which provides initialization
-and a partially virtualized peripheral interface.
-It was developed around the Kaya Operating System Project, with the main influence
-being the implementation of a virtual interface for emulated peripherals that
-are not present in any Raspberry Pi board: the HDMI connected display is split 
+architecture  which provides initialization
+and a partially virtualized peripheral interface, to be linked with the student's 
+own code.
+It was developed around the Kaya Operating System Project \cite{davolimorsiani},
+ with the main influence
+being the implementation of a virtual interface for emulated peripherals
+ not present in any Raspberry Pi board: the HDMI connected display is split 
 into four regions that act as printer devices, and the microSD card can contain
 several image files interpreted as disks and tapes.
 The presence of those emulated devices is important, as the Raspberry Pi boards
-are otherwise missing other pedagodically meaninful peripherals (the only
+are otherwise missing any pedagodically meaningful peripheral (the only
 exception being two UART serial interfaces).
 
 \subsection{Existing Work}
-Surprisingly, there is not much existing work on OS development for Rasbperry Pi 
-boards and the Broadcom SoC used is shamefully undocumented. Obviously most existing
-operating systems for the board are licensed as open source, but their sheer
+Surprisingly, there is not much existing work on OS development for Raspberry Pi 
+boards and the Broadcom \textit{SoC} which the board builds on is shamefully undocumented. 
+Obviously most existing
+Operating Systems for the board are licensed as open source, but their sheer
 dimension make them unsuitable for study.
 Therefore $\mu$MPS2, $\mu$ARM, and the Kaya OS project were the only references
 taken for theoretical composition and precepts.
-Some of the few works are:
+Some of the few, closest available projects are:
 \begin{itemize}
     \item \textbf{BakingPi}: the only real academic effort in this direction. It is an
         online course offered by the University of Cambridge \cite{bakingpi}, 
@@ -299,7 +321,7 @@ Some of the few works are:
         Operating Systems topics: it explains how to boot, receive input and present
         output on the Rapsberry Pi 1.
     \item \textbf{Ultibo}: Ultibo core is an embedded development environment 
-        for Raspberry Pi. It is not an operating system but provides many of 
+        for Raspberry Pi \cite{ultibo}. It is not an operating system but provides many of 
         the same services as an OS, things like memory management, networking, 
         filesystems and threading. It is very similar to the idea behind this work
         as an hardware abstraction layer that alleviates the burden of device
@@ -308,19 +330,24 @@ Some of the few works are:
         written entirely in Free Pascal.
         %TODO: study UltiBo some more
     \item \textbf{Circle}: Similar to Ultibo, but with a less professional approach
-        and written in C++. In the same way it might be considered an already
+        and written in C++ \cite{circle}. In the same way it might be considered an already
         existing version of the presented work: however the initial approach 
         for the user was judged too complicated and it was only used as a reference.
+    \item \textbf{Raspberry Pi OS}: An online step-by-step tutorial on OS development
+        inspired by the Linux kernel \cite{raspberrypios}. In many ways it is very
+        similar to <name>, but has meaningful differences: it is incomplete and
+        still ongoing, it does not contemplate an emulator and references mainly
+        the Linux kernel, making it more complex to understand.
 \end{itemize}
 In particular, none of the existing work can be considered a complete and detailed
 guide on how to develop an Operating System for Raspberry Pi, a void that this
-work intends to fill.
+project intends to fill.
 
 In regard of the ARMv8 specification and AArch64 programming the main resource
 is the \textit{``bare metal''} section of the official Raspberry Pi forums and the thriving
-production of examples produced by its users. Even if the focus of that community
+production of examples created by its users. Even if the focus of that community
 is more shifted on embedded programming than Operating Systems development, their
-work in hacking and reverse engineering the harware proved an invaluable resource.
+effort in hacking and reverse engineering the harware proved an invaluable resource.
 
 \subsection{Organization of This Document}
 This chapter introduced the motives and the objective of this work. In the following
@@ -335,55 +362,64 @@ Chapter 3 describes the functioning principles of the ARMv8 specification and
  document), but it should clearly delineate the main foundations needed to 
  understand this work.
 
-Chapter 4 gives an overview of the System-on-Chip the Raspberry Pi 3 is built
-upon, with attention to the peripheral devices reputed most useful from an 
-educational perspective.
+Chapter 4 is an extension of chapter 3 focused on the Memory Management Unit; 
+virtual address translation plays a huge part in developing
+Operating Systems, so it is believed it deserves a chapter of its own.
 
-Chapter 5 dwells on the implementation of mechanisms commonly used by an Operating
-System like context switch, scheduling, interrupt management and memory virtualization,
-which should be most interesting for students approaching this project.
+Chapter 5 gives an overview of the System-on-Chip the Raspberry Pi 3 is built
+upon, with attention to the peripheral devices reputed most useful from an 
+educational perspective. Register sets for said devices are briefly listed for 
+context.
 
 Chapter 6 covers the ``emulated peripherals''; those are the devices available in 
-$\mu$MPS and $\mu$ARM, absent in a real system such as the Raspberry Pi. The hardware
-abstraction layer uses the existing mailbox interface to seamlessly emulate said
+$\mu$MPS2 and $\mu$ARM, absent in a real system such as the Raspberry Pi. The hardware
+abstraction layer uses the existing mailbox interface and fast interrupts
+ to seamlessly emulate said
 devices on top of other resources. For the end user, the illusion to use a real
-peripheral is perfect.
+peripheral is almost perfect.
 
-Chapter 7 mentions the base usage of this project. The actual product is nothing
+Chapter 7 describes the project from an internal point of view, including some
+topics already covered in previous sections, but with a more in-depth explaination
+of the functioning principles.
+
+Chapter 8 dwells on the interface that is presented to the end user like ROM 
+functions, special memory locations and mailboxes.
+
+Chapter 9 mentions the base usage of this project. The actual product is nothing
 but a few precompiled elf binaries and a linker script, to be used when compiling
 to proof-of-concept OS, which can then be debugged step-by-step using GDB under
 any of its forms.
 
-Finally, chapter 8 a recap is made about the success of this work and directions
+Finally, chapter 10 a recap is made about the success of this project and directions
 for future works are listed.
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Discarded Options}
-Before settling for 64-bit ARMv8 on Raspberry Pi 3 several other options were 
-probed. What follows is a recap and explaination on why they were discarded
+Before settling for 64-bits ARMv8 on Raspberry Pi 3 several other options were 
+probed; what follows is a recap and explaination on why they were discarded
 in favor of the latter. As mentioned before, the work began as an attempt to
 silently port kernels compiled for the $\mu$ARM emulator to real hardware to 
 provide students with a better sense of accomplishment.
 
 \section{Raspberry Pi 2 (ARM32)}
-The first \textit{Soc} to be experimented on was the Raspberry pi 2 (model B).
+The first \textit{SoC} (System On Chip) to be experimented on was the Raspberry pi 2 (model B).
  The initial idea was to replicate as closely as possible the
 $\mu$ARM experience, which runs on an emulated ARM7TDMI; although the RPi2 
 board uses a quad-core Cortex-A7 ARM it is still fairly similar, maintaining most
-of the registers and the 32-bit model.
+of the registers and the 32-bits model.
 
 As the first real approach to the problem this was mainly a learning experience
 for the author. After understanding the basics of the system it became
 obvious that the differences between $\mu$ARM and any Raspberry Pi board were 
 too great to consider a simple porting of the projects meant for the emulator.
-This was evident especially for the emulated peripherals: like $\mu$UMPS, $\mu$ARM offers
+This was evident especially for the emulated peripherals: like $\mu$UMPS2, $\mu$ARM offers
 to the user 5 types of peripheral devices (network interface, terminal, printer,
 tape, disk) that find no immediate counterpart on the British family of boards.
 
 This prompted to reconsider the objective of the work from a simple port to
 a different and autonomous educational trial. Thus, effort was bent into searching
 for a better way to develop OSes on a Raspberry Pi board while still using
-Kaya, $\mu$ARM and $\mu$UMPS as reference.
+Kaya, $\mu$ARM and $\mu$UMPS2 as reference.
 
 With the new goal in mind there were two main issues with the Raspberry Pi 2:
 \begin{enumerate}
@@ -402,7 +438,7 @@ With the new goal in mind there were two main issues with the Raspberry Pi 2:
             3+ version in march 2018. It was assumed any work on it would have
             risked lack of support in the following years (assumption that was
             somehow confirmed with the new release, which follows the wake of 
-            the version 3).
+             version 3).
 \end{enumerate}
 
 
@@ -410,11 +446,9 @@ With the new goal in mind there were two main issues with the Raspberry Pi 2:
 The model Zero was the second option to be considered for this work. It is 
 significantly cheaper (with prices as low as 5\$ for the no-wireless version)
 and compact. It runs on a single core ARM1176JZF-S, not too different from
-the previously considered model or the $\mu$ARM emulated processor.
-
+version 2 or the $\mu$ARM emulated processor.\\
 What made this model especially interesting was the ability to load the kernel
 image in memory through an USB connection, without using a microSD card altogether.
-
 The board has USB On-The-Go capabilities, allowing it to appear as a device if connected
 to an host; at that point it's possible to load the kernel using the official
  \textit{rpiboot} utility.
@@ -424,33 +458,36 @@ via USB to the host PC, load it with \textit{rpiboot} and then interact with a
 serial output from the same USB connection.
 Unfortunately the last step would have required a massive amount of work to write
 a bare metal OTG USB driver and have the Raspberry Pi Zero appear as a serial 
-console. Without it, the only way to receive actual output was to have a second
-USB to serial converter connected to the GPIOs.
+console. Without it the only way to receive actual output was to have a second
+USB to serial converter connected to the GPIOs, which is no less cumbersome than
+with other models.
 
 This, along with the lack of usable debugging tools, lead yet again to look for
 a better option.
 
-\section{Rasbperry Pi 3 (ARM64)}
-The final choice was the Raspberry Pi 3 (any model, in theory). Though sharing
+\newpage
+
+\section{Raspberry Pi 3 (ARM64)}
+The final choice was the Raspberry Pi 3 (any model, in theory). Although it shares
 some of the shortcomings of previously considered alternatives like lack of 
 peripherals and a difficult development cycle, it offered a significant advantage:
-the availability of an emulator, Qemu \footnote{Qemu has since supported Raspberry Pi 2
+the availability of an emulator in the form of Qemu \footnote{Qemu has since 
+supported Raspberry Pi 2
 as well, but by the time the author realized it version 3 was already the designated
 board. It still retains many advantages over 2.}.
-The support of the raspi3 machine on Qemu came only recently (version 2.12.1, August 2018)
+The support of the {\tt raspi3} machine on Qemu came only recently (version 2.12.1, August 2018)
 and the opportunity was seized immediatly. Qemu support means kernels meant for
 the board can be more easily tested on the emulator and debugged with GDB.
-This permits to keep the advantages of a virtual environment like in $\mu$MPS and
+This permits to keep the advantages of a virtual environment like in $\mu$MPS2 and
 $\mu$ARM while at the same time taking a step further towards practical usage
 when the kernel is run seamlessly on real hardware too.
 
 Qemu has some limitations that can be overlooked. It supports only some of the
 hardware peripherals of the Raspberry Pi 3, with notable exclusions being the
-System Timer, the Mini UART or UART1 and the USB controller 
+System Timer and the USB controller 
 (that manages Network peripherals as well).
-Of those three limitations only the USB controller cannot be overcome: the 
-System Timer can be replaced by the internal ARM Timer, and the UART1 is not
-the only serial interface built in on the board (Qemu emulates UART0).
+Of those two limitations only the USB controller cannot be overcome, as the 
+System Timer can be replaced by the internal ARM Timer.
 USB and Network Interfaces are missing from this project.
 
 Lastly, with Raspberry Pi 3 came also the change to the architecture, from 32 
@@ -459,10 +496,9 @@ which adds 64 bit support while still keeping backward compatibility for 32 bit
 applications. In theory, the student developed kernel could still use a 32-bit
 architecture; however, after studying thorughly the new AArch64 it was decided
 to switch to it.
-
 The main reasons for this decision are two: first, the Kaya OS project (and
 other similar projects as well) does not have any particular reference to the
-width of a word on the host architecture. Provided they have to manage different
+width of a word on the host architecture; provided they have to manage different
 registers, the underlying architecture is transparent to students.
 Second, it is the author's belief that the new ARMv8 specification for AArch64
 is significantly simpler than its predecessors. As an example, it has only four execution
@@ -476,17 +512,17 @@ sufficient to understand the entirety of this project. The main references are
 of course the Programmer's Guide \cite{guide} and the Arm Reference Manual \cite{armarm}.
 
 ARMv8 is the latest generation of ARM architectures, following ARMv7. It brings
-an enourmous list of changes from its predecessors, finally adding a 64 bit option
-to the family; it does so while still keeping backward compatibility towards 32 bit
-code and applications. The execution state in which an ARMv8 processor runs 64 bit
+an enourmous list of changes from its predecessors, finally adding a 64-bits option
+to the family; still, it does so while still keeping backward compatibility towards 32-bits
+code and applications. The execution state in which an ARMv8 processor runs 64-bits
 code is called \textit{AArch64}, while \textit{AArch32} identifies the compatibility
-state for 32 bit applications.
+state for 32-bits applications.
 The AArch32 is very similar to the previous ARMv7 specification; in fact, when 
 the scope of this project was still moving from the Raspberry Pi 2 (ARMv7) to the
 Raspberry Pi 3 (ARMv8) the source code and toolchain used were initially unchanged.
-Being the first attempt for the ARM consortium at 64 bit machines it takes advantage
+Being the first attempt for the ARM consortium at 64-bits machines it takes advantage
 of a fresh start, removing many elements of complexity found in past entries while
-copying positive qualities from competitors that came before them (like 64 bit MIPS).
+copying positive qualities from competitors that came before them (like 64-bits MIPS).
 
 \section{Exception Levels}
 When executing in AArch32 state the registers and system configuration is almost
@@ -503,21 +539,21 @@ non-injective, surjective mapping from processor modes to exception levels.
 \end{figure}
 
 We describe briefly the function of each exception level:
-\begin{description}
-    \item[EL0] is the lowest exception level, often referred to as ``unprivileged''
+\begin{itemize}
+    \item \textbf{EL0} is the lowest exception level, often referred to as ``unprivileged''
         in opposition to every other, ``privileged'', level. It has severe 
         limitation in accessing system registers and failure to respect them
-        is met with a synchronous abort. It is meant to run user application, 
+        is met with a synchronous abort exception. It is meant to run user applications, 
         processes below the kernel.
-    \item[EL1] is the first privileged level. It is where most interrupts end
+    \item \textbf{EL1} is the first privileged level. It is where most interrupts end
         up and is meant for the OS kernel.
-    \item[EL2] is the Hypervisor level; here resides harware support for virtualization,
+    \item \textbf{EL2} is the Hypervisor level; here resides harware support for virtualization,
         a level meant to supervise virtual machines. For example, KVM is an in-kernel
         virtualization running at level \textbf{EL2} and supervising the virtual kernel 
         at \textbf{EL1}.
-    \item[EL3] is used to separate the system into secure partitions with the
+    \item \textbf{EL3} is used to separate the system into secure partitions with the
         hardware TrustZone support.
-\end{description}
+\end{itemize}
 
 \subsection{Changing Exception Level}
 A change in the current exception level can be either caused by a willing decision
@@ -529,21 +565,21 @@ level is not lowered, regardless of interrupt enabling).
 To access a lower exception level an {\tt eret} instruction is required: {\tt eret}
 loads the state stored in \textbf{SPSR\_ELn} (see \ref{spsr}), where \textbf{ELn} 
 is the current exception level, as the new system status (exception level included).
-Since no exception ever handled at \textbf{EL0}, \textbf{EL0} is only reachable 
-on {\tt eret} instructions.
+Since no exception is ever handled at \textbf{EL0}, \textbf{EL0} is only reachable 
+through {\tt eret} instructions.
 
 Exceptions are normally taken to \textbf{EL1} but can be set to run in \textbf{EL2}
 or even \textbf{EL3} by configuring corresponding system registers \textbf{HCR\_EL2}
-and \textbf{SCR\_EL3}, Hypervisor Configuration Register and Secure Configuration
+and \textbf{SCR\_EL3}, called Hypervisor Configuration Register and Secure Configuration
 Register respectively. 
 
 It is also possible to change execution \textit{state} (i.e. AArch64 or AArch32)
-during runtime, but that is irrelevant for the scope of this work, that lies
+during runtime but that is irrelevant for the scope of this work, as it lies
 entirely in AArch64.
 
 \section{Registers}
 \subsection{General Purpose Registers}
-One of the immediate benefits of 64 bit architecture is a larger register pool:
+One of the immediate benefits of a 64-bits architecture is a larger register pool:
 ARMv8 uses 31 64-bits wide general purpose registers, more than doubling from
 ARMv7.
 The registers are numbered from \textbf{x0} to \textbf{x30}. Although they are
@@ -580,7 +616,7 @@ access to the lower (i.e. least significant) 32 bits of the register; the upper
 There are 5 special registers:
 \begin{description}
     \item[Zero Register:] \textbf{xzr} and \textbf{wzr} provide access (as 64 and
-        32 bit register respectively) to a special register that ignores write
+        32 bits register respectively) to a special register that ignores write
         attempts and always read as zero.
     \item[Program Counter (pc):] up until ARMv7 the program counter was a general purpose
         register held in \textbf{r15}. In ARMv8 it has a very limited access,
@@ -596,7 +632,7 @@ There are 5 special registers:
         program counter.
     \item[Saved Process Status Register (spsr):] similarly to \textbf{elr}, this
         register is automatically initialized with various status informations
-        upon taking and exception, and is restored (after eventual modification)
+        upon taking an exception, and is restored (after eventual modification)
         with an {\tt eret} instruction.
     \item[Stack Pointer (sp):] The current stack pointer. It is freely accessible
         both in read and write operations.
@@ -605,7 +641,7 @@ There are 5 special registers:
 \begin{figure}[t]
     \begin{center}
 \includegraphics[scale=0.68]{images/tesi9.png}
-\caption[special registers]{AArch64 special registers}\label{fig:specialreg}
+\caption[special registers]{AArch64 Special Registers}\label{fig:specialreg}
     \end{center}
 \end{figure}
 
@@ -626,14 +662,14 @@ A coprocessor is an auxiliary core used to supplement the functions of the prima
 processor; ARMv7 specified a generic coprocessor interface to connect up to 
 15 assisting cores, of which one was reserved for system registers management.
 While coprocessors had to be controlled via specific instructions ARMv8 system registers
-are directly accessed in Assembly with the {\tt mrs} and {\tt msr} instructions
+are directly accessed in Assembler with the {\tt mrs} and {\tt msr} instructions
 as per any other register. This is a welcome change that simplifies the developer's
 approach to system configuration.
 
 Similarly to special registers many system registers have different, banked versions
 for some or all exception levels (usually not \textbf{EL0}), each with the
 suffix \textit{\_ELn} to indicate the corresponding level.
-There registers are usually 32 bits wide. What follows is a list of system registers
+These registers are usually 32 bits wide. What follows is a list of system registers
 considered most important for the purpose of this work; for a detailed description
 of the various bit fields refer to the ARM reference manual \cite{armarm}.
 \begin{description}
@@ -641,7 +677,8 @@ of the various bit fields refer to the ARM reference manual \cite{armarm}.
         level holds the information regarding the last occurred exception (only
         for synchronous and SError, not for IRQs and FIQs. See \ref{exceptions}
         for more on exceptions). It is necessary to distinguish between exception
-        classes and to find details specific to the exception.
+        classes and to find details specific to the cause of disruption in normal
+        program flow.
     \item[Fault Address Register:] \textbf{FAR\_EL\textit{n}}, it is used in pair 
         with \textbf{ESR\_EL\textit{n}} to find which address caused a Data or 
         Instruction synchronous abort.
@@ -652,7 +689,7 @@ of the various bit fields refer to the ARM reference manual \cite{armarm}.
         possible values in a MMU translation table entry for translations at level \textit{n}.
     \item[Multiprocessor Affinity Register:] \textbf{MPIDR\_EL1} is the 
         executing core id, used mainly to distinguish on which core the code is 
-        runnint on.
+        running on.
     \item[Secure Configuration Register:] \textbf{SCR\_EL3} controls Secure 
     state and trapping of exceptions to EL3.
     \item[System Control Register:] \textbf{SCTLR\_EL\textit{n}} controls 
@@ -673,9 +710,10 @@ level, aritmetic flags, interrupt mask and so on.
 The AArch64 version of said register is implicitly present and not directly 
 accessible. Instead, the single fields are supplied to read and
 write independently; this collection of ``fake registers'' is globally called 
-\textbf{PSTATE}. Curiously, querying for the \textbf{CPSR} register in a GDB 
+\textbf{PSTATE}; the single fields and their meaning are listed in table \ref{pstatetable}.
+ Curiously, querying for the \textbf{CPSR} register in a GDB 
 debugger will correctly display the \textbf{PSTATE} components as a whole, although
-no such register can be loaded from or stored to in Assembly code.
+no such register can be loaded from or stored to even with Assembler instructions.
 
 \begin{table}[t]
     \begin{center}
@@ -696,6 +734,7 @@ no such register can be loaded from or stored to in Assembly code.
     nRW        & None                         & \begin{tabular}[c]{@{}c@{}}Current execution state\\ (AArch32 or AArch64)\end{tabular}                                                                                                                \\ \hline
     SP         & None                         & \begin{tabular}[c]{@{}c@{}}Stack pointer selector\end{tabular} \\ \hline
     \end{tabular}
+    \label{pstatetable}
     \caption[PSTATE fields]{PSTATE fields definitions}
 \end{center}
     \end{table}
@@ -711,10 +750,10 @@ and every exception can be either synchronous or asynchronous (see figure \ref{f
 
 The code to run when an exception is fired is specified by the developer in an 
 exception vector table. The pointer to the exception vector table is written to 
-\textbf{VBAR\_EL\textit{n}} register, for \textit{n} ranging from level 1 to 3,
+the \textbf{VBAR\_EL\textit{n}} register, for \textit{n} ranging from level 1 to 3,
 so every exception level has its own table (nothing prevents multiple levels
 to point to the same table however). For exceptions fired while at \textbf{EL0} 
-the table for \textbf{EL1} is used.
+the table for \textbf{EL1} is referenced.
 
 The exception table can be anywhere in memory but must be 128 bytes aligned and 
 must have the format specified in table \ref{etable}.
@@ -734,7 +773,9 @@ The table can be divided in four sections:
 \end{enumerate}
 
 Each section has four different handlers for synchronous exceptions, IRQ, FIQ
-and SError.
+and SError. The Stack Pointer to be loaded is chosen by the stack pointer selector
+field in the current state register (see table \ref{pstatetable}); it can either be the current stack pointer or 
+a memory address banked for the destination level.
 
 \begin{table}[t]
     \begin{center}
@@ -759,18 +800,19 @@ and SError.
     VBAR\_ELn + 0x700 & FIQ/vFIQ       &                                                                                    \\ \cline{1-2}
     VBAR\_ELn + 0x780 & SError/vSError & \multirow{-4}{*}{\begin{tabular}[c]{@{}l@{}}Lower EL\\ using AArch32\end{tabular}} \\ \hline
     \end{tabular}
-    \caption[Exception table]{Exception table format}
+    \caption[Exception Table]{Exception table format.}
     \label{etable}
 \end{center}
     \end{table}
 
 \subsection{Interrupts}
 Interrupts can be fast interrupts (FIQ) or normal interrupts. Aside from the fact 
-that FIQ have higher priority, these two types of exception are virtually identical.
+that FIQ have higher priority these two types of exception are virtually identical,
+and fast interrupts are considered a vestige from past architectures.\\
 Usually it is the developer's responsibility to route an interrupt source to 
 IRQ or FIQ.
-Interrupts are tipically associated with external hardware and connected to 
-input pins to the core. The connection can be direct or, more commonly, pass through
+Interrupts are tipically associated with external hardware and connected via 
+input pins to the processor; The connection can be direct or, more commonly, pass through
 an external device called interrupt controller that elaborates interrupt priorities
 and organization (see section \ref{gic}).
 
@@ -792,13 +834,13 @@ during an instruction fetch cycle, while Data Aborts follow failed data access.
 
 Despite the names depicting error conditions, aborts can work in perfectly normal
 and predictable flows. This is the case of MMU faults, generated by the Memory
-Manage Unit on occasions like access to dirty page entries.
+Management Unit on occasions like access to dirty page entries.
 The severity of conditions that set off abort exceptions can be configured to 
 some extent with system registers; for example, a TLB miss can be ignored or 
 fire an exception, and memory accesses can pass through address alignment 
 and permission checks which may or may not interrupt the process.
 
-Aborts can be both synchronous and asynchronous. MMU faults and alignment induced 
+Aborts can be both synchronous and asynchronous: MMU faults and alignment induced 
 aborts are always synchronous, while data aborts can be asynchronous in certain
 situations.
 
@@ -809,8 +851,8 @@ case of the BCM2837.
 
 \subsection{Exception Generating Instructions}
 We have seen that a core can lower its exception level with {\tt eret}, but can
-only increase it through an exception. For this purpose there are Assembly instructions
-that induce an exception to a higher exception level, usually to require a service 
+only increase it through an exception. For this purpose there are Assembler instructions
+that induce an exception to a higher execution level, usually to require a service 
 paired with an higher privilege. The most obvious example of this behaviour are
 system calls.
 \begin{itemize}
@@ -841,7 +883,7 @@ based on their position on the route from the single core to the external memory
 
  \begin{figure}[t]
  \includegraphics[scale=0.6]{images/tesi12.png} 
- \caption[Cache levels]{Position of different cache levels in the system.}\label{fig:cache}
+ \caption[Cache Levels]{Position of different cache levels in the system.}\label{fig:cache}
  \end{figure}
 
  In figure \ref{fig:cache} we can see the disposition of the levels. The distance
@@ -864,9 +906,11 @@ attributes when configuring the MMU.
 \section{Multiprocessor}
 Although not mandatory, the ARMv8 architecture is specifically structured to 
 host systems with more than one core, like the Cortex-A53 CPU.
-In a multicore environment each core has bot personal and shared resources:
+In a multicore environment each core has both personal and shared resources:
 the registers (general purpose and system) are tipically duplicated and have a
 localized effect, while the main memory is shared by all cores at all times.
+As seen in the previous section the same applies to caches, with memory banks closer
+to the core itself being personal while others are shared.
 
 Each core executes has its own execution thread, identical or different from 
 the others. The A-53 processor has a single clock input, so every core runs at
@@ -875,7 +919,8 @@ the same frequency.
 
 At a shallow level, the only register one should be concerned with when dealing 
 with parallelism is \textbf{MPIDR\_EL\textit{n}}. It contains the identifying number
-for both cluster and core that is currently executing; on the A-53 there is only
+for both cluster and core that is currently executing, so reading it yields different
+results depending of who is doing it. On the A-53 there is only
 one cluster and four cores (indexed from 0 to 3).
 
 When the reset interrupt is fired execution starts only for the first core; the
@@ -883,8 +928,8 @@ remaning three are held in a waiting state (as if by executing a {\tt WFE} instr
 They can be woken up by executing a {\tt SEV} (send event) instruction, at which
 point execution starts at address {\tt 0x80000} for everyone else.
 The most immediate way to split execution into different threads is to check 
-\textbf{MPIDR} do a conditional branch. From there each core should be parked in 
-a spinlock, waiting to be released and directioned towards the code it should
+\textbf{MPIDR} and follow up with a conditional branch. From there each core should be parked in 
+a spinlock, waiting to be released and directed towards the code it should
 execute.
 
 \section{ARM Timer}
@@ -895,7 +940,7 @@ Given such functions are not needed in this work, the explaination will focus
 in the physical counter and interrupt setting registers.
 
 First of all, the timer must be initialized. It has a fixed running frequency
-of 62.5 MHz that increments a 64 bit counter on each tick, but by default the 
+of 62.5 MHz that increments a 64-bits counter on each tick, but by default the 
 timer registers cannot be accessed at lower 
 exception levels. Setting the proper bits of \textbf{CNTHCTL\_EL2} 
 and \textbf{CNTKCTL\_EL1} signal clearance of access from \textbf{EL2} 
@@ -903,7 +948,7 @@ and \textbf{EL1} to lower levels, respectively.\\
 
 From there, every exception level (and each core) but \textbf{EL0} have its own timer to configure
 and use freely. Additionally, \textbf{EL1} and \textbf{EL2} can benefit from a
-virtual timer each, with a counter value equal to the physical one minus a 
+virtual timer with a counter value equal to the physical one minus a 
 specified offset (register \textbf{CNTVOFF}), for a total of five channels.
 Each timer is controlled through four classes of registers:
 \begin{itemize}
@@ -930,43 +975,51 @@ value can be loaded onto the timer value register, and eventually an exception w
 be fired. Timer interrupt lines are de-asserted either by setting a new timer
 in the future or by disabling the counter altogether.
 Even at the same exception level, physical and virtual timers have separate interrupt 
-lines.
+lines. In this project both are used at \textbf{EL1} by the abstraction layer: 
+the physical line is routed to normal interrupts while the virtual one is managed
+by a FIQ.
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{The Memory Management Unit}
 \label{mmu}
 The Memory Management Unit is a device found in most CPUs tasked with the objective
-of translating virtual memory addressing with physical addressing. The Cortex-A53
-is no exception and has an advanced internal MMU. It is such an important part
-of the system that even if it's technically part of the ARMv8 specification it 
-deserves a chapter on its own.
+of translating from virtual memory addressing to physical addressing. The Cortex-A53
+is no exception and has an advanced internal MMU. It is such an important component
+of the system and of any Operating System that even if it's technically 
+part of the ARMv8 specification it deserves a chapter on its own.
 
 The main purpose of address translation is to allow each process to have its own
 virtual address space that has nothing to do with how much memory is available 
 (and where this memory is located) on the system, with hardware MMIO and other
 processes hidden from its view.
-If the memory management unit is active any address used in the system is first
-elaborated and translated: different sections of the 64 bits address (starting
+If the memory management unit is active any address referenced by a process is first
+elaborated and translated: different sections of the 64-bits address (starting
 from most significant ones) are used to index different levels of a tree containing
-translation entries. Then there can be additional checks on whether the current
-exception level has the proper permissions to access the resulting physical memory.
-Only then the actual access is performed; all of this is handled by the hardware and 
-can be almost entirely ignored by the programmer after setup.
+translation entries. While translating there can also be additional checks on 
+whether the current exception level has the proper permissions to access 
+the resulting physical memory. for example memory blocks where the kernel is loaded
+should not be accessed in any way by \textbf{EL0} code; in a similar way memory
+that is writable at \textbf{EL0} cannot be allowed to execute at higher permission
+levels. The latter constriction is built in the specification by default; the former
+should instead be enforced by the developer via MMU configuration.\\
+Only after translation and permission checks are dome the actual memory access 
+is performed; however, most of the process is handled by the hardware and 
+can be almost entirely ignored by the programmer after the initial setup.
 
 \section{Address Translation}
 As briefly mentioned in the introduction when the MMU is active every address is 
-treated as multiple indexes for the translation table. The translation table is 
-a tree of translation entries that map a section of RAM: each level of the 
+treated as an array of indexes for the translation table. The translation table is 
+a tree of translation entries that maps a section of RAM: each level of the 
 tree has entries covering a certain number of elements in the next level until the 
-last, that maps memory directly.
+last, that corresponds directly to memory.\\
 
-The following example considers a tree where each entry before last level
+The example that follows considers a tree where each entry before last level
 points to 512 more entries and 
 depicts a trivial ``identity'' mapping: every virtual address is translated in 
 the same physical address. The bottom level covers a 4KiB block of memory directly
-(this reason for these numbers will be explained in section \ref{translationsize}). There
+(the reason for these numbers will be explained in section \ref{translationsize}). There
 are four levels in the tree, level 0 to 3.
-Presume we want to translate a 64 bits address:
+Presume we want to translate a 64-bits address:
 \begin{itemize}
     \item the 16 most significant bits are reserved for kernel space virtualization
         (more on this topic in section \ref{kernelvirt}).
@@ -982,14 +1035,18 @@ Presume we want to translate a 64 bits address:
         word referenced.
 \end{itemize}
 
-%TODO:immagine
+ \begin{figure}[h]
+ \includegraphics[scale=0.42]{images/tesi15.png} 
+ \caption[Address Translation Example]{ Example of the address translation process .}\label{fig:translation}
+ \end{figure}
+
 
 In this mundane example it is evident how the translation process is arbitrary;
 every level can simply be cut off and the resulting address be obtained by adding
 the intermediate indexes and the remaining bits (to be considered as the final 
-offset). This is not possible anymore if the translation function is not an 
-identity. 
-In this case the translation function is codified by the pointers in the table entries;
+offset).\\
+This is not possible anymore if the translation function is not an identity,
+in which case the translation function is codified by the pointers in the table entries;
 the table entry marks the beginning of the next level of tables and the corresponding
 piece of virtual address indexes the chosen entry.
 
@@ -999,30 +1056,35 @@ With granule size we refer to the smallest possible block of memory that can be
 indexed by the MMU tables; in the previous example, 4KiB.
 The ARMv8 specification allows for three different granule sizes: 4KiB, 16KiB and 64KiB.
 The actual ARM processor abiding to the standard can in turn implement those granules
-only partially. The Cortex-A53 implements them all.
+only partially, and fortunately the Cortex-A53 implements them all.
 The granule size is a global setting, affecting the entirety of the page table.
 Different granule size dictate how many levels is possible to have and how many
 entries are in each table (for example, a granule of 64 KiB allow only 3 levels
-and a granule of 16KiB will result in 10 bit wide address sections).
+and a granule of 16KiB will result in 10-bits wide address sections).
 
 A small granule size will result in more control but also in a bigger table; to 
-divide a 2GiB RAM into 4KiB blocks an operating system will need 524288 64 bits
+divide a 2GiB RAM into 4KiB blocks an Operating System will need 524288 64-bits
 wide table entries, for a total of 4MiB of allocated memory.
 Choosing a fine grained control does not mean commiting to it, however. If there
 are large sections of memory with the same memory attributes and virtual addressing
 (e.g. MMIO memory that should generally not be accessed by user processes) the 
 developer can ``cut early'' the page table tree and use any intermediate memory
 range. In the above example we could arbitrarily stop at level 2 and create a part
-of the table with direct entries spanning 2 MiB each.
+of the table with direct entries spanning 2 MiB each, situation photographed in
+figure \ref{fig:translation2}.
 
-%TODO: immagine
+ \begin{figure}[h]
+ \includegraphics[scale=0.48]{images/tesi16.png} 
+ \caption[Address Translation Example]{ Here the last 21 bits are
+ used as a bigger offset for a 2 MiB block of memory}\label{fig:translation2}
+ \end{figure}
 
 \section{Table Descriptor Format}
 When in AArch64 there is a single accepted format for table entries. We will now
 consider the configuration consequential to a 4 KiB granule size; other choices
 differ sligtly in translation indexes width and position, but maintain the same
-core concepts. The table descriptor is 64 bits wide, separated in fields like 
-in figures \ref{fig:desc1} and \ref{fig:desc2}.
+core concepts. The table descriptor is 64-bits wide, separated in fields listed 
+in figure \ref{fig:descriptor}.
 
 Any table entry is one of two types:
 \begin{enumerate}
@@ -1037,6 +1099,22 @@ as depicted in table \ref{tab:desc}; an invalid entry leads to an MMU fault exce
 Note that not every level can host a block entry; with a granule size of 4 KiB, 
 level 0 does not admit that kind of descriptor.
 
+\begin{table}[]
+    \begin{center}
+    \begin{tabular}{|c|l|}
+    \hline
+    \rowcolor[HTML]{9B9B9B} 
+    \begin{tabular}[c]{@{}c@{}}Entry Type\\ field\end{tabular} & Meaning          \\ \hline
+    00                                                         & Invalid          \\ \hline
+    01                                                         & Block Entry      \\ \hline
+    10                                                         & Invalid          \\ \hline
+    11                                                         & Table Descriptor \\ \hline
+    \end{tabular}
+    \label{tab:desc}
+    \caption[Page Entry Types]{Page entry types.}
+\end{center}
+    \end{table}
+
 \subsection{Table Descriptors}
 Table descriptors point to a table entry in the next level. Bit fields have the 
 following meaning:
@@ -1048,7 +1126,7 @@ following meaning:
         sizes other than 4KiB}:47]} is the address of the next level table. It is codified
         as if it started from the least significant bit, with 
         [11\footnote{see footnote \ref{4knote}}:0] bits assumed
-        as 0. Because of this all page tables must be 4096 ($2^12$) bytes aligned.
+        as 0. Because of this all page tables must be 4096 ($2^{12}$) bytes aligned.
     \item \textbf{[48:58]} are ignored/reserved bits.
     \item \textbf{[59]} PXNTable field: private execute never bit for subsequent
         levels of lookup; if set the memory range covered by this and following entries
@@ -1111,11 +1189,11 @@ fields:
         selected entry is accessed for the first time, in which case an MMU abort
         will be fired. The exception handler should take care of the initialization,
         set the access flag to 1 and attempt again the memory access.
-    \item \textbf{[11]} is the not global bit (nG). If a lookup using this 
+    \item \textbf{[11]} is the not global bit (\textit{nG}). If a lookup using this 
         descriptor is cached in a TLB, determines whether the TLB
         entry applies to all ASID values, or only to the current ASID value
         (see section \ref{tlb} for more).
-    \item \textbf{[12:47]} is the address to the memory block that is pointed byte
+    \item \textbf{[12:47]} is the address to the memory block that is pointed by
         the descriptor. It is aligned similarly to the address in a table descriptor,
         but it contains actual memory instead of a next level page table.
     \item \textbf{[48:50]} are ignored/reserved bits.
@@ -1162,20 +1240,20 @@ Every memory address is one of two possible types: normal or device.
 Normal memory is the one used for most memory regions and where there can be 
 the most invasive optimizations. Normal memory can be heavily cached and is 
 considered to be weakly ordered: the actual number, time and order of access can 
-differ from the logical flow of the program without causing errors or problems.
+differ from the logical flow of the program without causing semantic errors.
 
 Device memory is used instead for memory mapped peripherals. When the subject is
 a device register the order of operations and even repeating the same instruction
-might yield unexpected side effects. Caching must be disabled too, as the content
-of a device bus is often non deterministic.
+might yield unexpected side effects; caching must be disabled too, as the content
+of a device bus is often non deterministic.\\
 Other than the memory type there are fine tuned attributes to distinguish
-what level of caching is allowed.
+what levels of caching and optimization are allowed.
 
 \subsection{Shareability}
-In a multicore system the main memory is obviously shared among all the cores.
-This can lead to coherency problems in caches external to the single core (level 2
+In a multiprocessor system the main memory is obviously shared among all the cores.
+This can lead to coherency problems in caches external to the individual core (level 2
 and level 3, see section \ref{cache}). Hinting who is going to use a certain memory
-block can greatly help the system when managing caches, greatly improving performance
+block can greatly help the system when managing caches, improving performance
 and energy cost. There are three possible
 shareability options:
 \begin{description}
@@ -1190,11 +1268,12 @@ shareability options:
 The shareability attribute is found in the specific field of the block entry descriptor
 (see section \ref{mmublock})
 
+\newpage
+
 \subsection{Cache policies}
-When a cache search misses and the entry is not found, the respective cache is 
+When a cache search misses and the entry is not found, the respective cache entry is 
 updated with the value found on RAM. When the search is successful but and the
 operation is a write, deciding what location to update is not trivial. \\
-
 Regarding normal memory, the OS developer can specify cache policies as any combination
 of the following three classes:
 
@@ -1204,29 +1283,36 @@ of the following three classes:
     \item \textbf{Transient:} Transient or Non-Transient
 \end{enumerate}
 
-Different cacheability options were described in section \ref{cache}.\\
-When \textit{write back} memory locations are updated only the corresponding cache entry
-is modified and marked as dirty; external memory is updated only when the 
-line is evicted or explicitly cleaned.
-\textit{Write through} is instead a safer approach, where an update changes both the cache
-and the system memory.\\
+Different cacheability options refer to which fast memory block should be used
+- internal to the core, internal to the cluster or external - and were described
+ in section \ref{cache}.\\
+When \textit{write back} memory locations are updated only the  cache entry
+is modified and marked as dirty; corresponding main memory locations are updated 
+only when the cache line is evicted or explicitly cleaned.
+\textit{Write through} is instead a safer (but slower) approach, where an update 
+changes both the cache and the system memory.\\
 \textit{Transience} is an hint to the cache controller about how long an address should be 
-kept in cache for. This behaviour is implementation defined.\\
+kept in cache for. This behaviour is implementation defined, not configurable
+by the developer.\\
 
 Device memory is treated differently, and thus possesses its own set of attributes:
 \begin{enumerate}
     \item \textbf{Gathering:} this property determines whether multiple accesses
         can be merged into a single bus transaction for this memory region. If 
         the address is marked as \textit{gathering} the processor can, for example, 
-        merge two byte writes into a single work half write.
-    \item \textbf{Reordering:} this determines whether accesses to the same 
+        merge two byte writes into a single-word half write.
+    \item \textbf{Reordering:} attribute defining whether accesses to the same 
         device can be re-ordered with respect to each other. If the address is 
-        marked as \textit{non Re-ordering}, then accesses within the same block 
-        always appear on the bus in the order specified by the code.
-    \item \textbf{Early Write Acknowledgement:} This determines whether an 
+        marked as \textit{non Re-ordering} then accesses within the same block 
+        always appear on the bus in the order specified by the code, while
+        \textit{Re-ordering} ranges of memory will be subject to read and write
+        chains optimization.
+    \item \textbf{Early Write Acknowledgement:} identified as \textit{E} 
+        or \textit{nE}, declares if an 
         intermediate write buffer between the processor and
         the slave device being accessed is allowed to send an 
-        acknowledgement of a write completion.
+        acknowledgement of a write completion. It is only used for closely 
+        intertwined operation with special peripherals.
 \end{enumerate}
 
 Refer to the Architectural Reference Manual \cite{armarm} for the exact values
@@ -1235,46 +1321,65 @@ and codes of the memory attributes combinations.
 \subsection{MAIR Configuration}
 Due to the high number of possible combinations (many of which are problably 
 scarcely used), the memory attributes 
-configuration procedure follows a peculiar approach. Instead of having separate
+configuration procedure follows a peculiar and somewhat unconventional approach.
+Instead of having separate
 fields in the already filled block descriptor format, the programmer defines
-up to eight configurations coded with 8 bits each, which are then pushed into
-the \textbf{MAIR\_EL\textit{n}} register as if in an array.
-The block descriptor in turn has a 3 bit field that indexes which configuration
-to use in said array, in a two step process.
+up to eight memory attribute combinations codified with 8 bits each which are 
+then pushed into the \textbf{MAIR\_EL\textit{n}} register as if in an array.
+The block descriptor in turn has a 3-bits field, the memory attribute index,
+ that indexes which configuration to use in said array, in a two step process.
 
+ In the image example, the \textbf{MAIR} register is populated with two options
+ for cached and non-cached normal memory in the first two bytes. Page table entries
+ will then select a combination using the memory attribute index.
+ Note that any combination can be placed anywhere in the register and it does not
+ need to be correctly initialized in all the eight bytes, as long as only correct
+ entries are indexed by the page table.
 
+ \begin{figure}[h]
+    \begin{center}
+ \includegraphics[scale=0.7]{images/tesi17.png} 
+ \caption[MAIR Register]{MAIR register configuration and indexing by the page
+ table entries.}\label{fig:mair}
+    \end{center}
+ \end{figure}
+ %16 ExbiByte
 
 \section{Kernel Space Virtualization}
 \label{kernelvirt}
 In a tipical OS environment multiple processes run concurrently and use dynamically
 allocated memory and resources. The memory management unit serves to this purpose:
 every process have its own set of translation tables managed by the kernel and sees a 
-contiguous range of memory at its disposal. In this multitude of actors we can
-consider the kernel as a process in its own right, albeit of a superior kind; because
-it has no peers and often uses a static memory space the translation mechanism
-is meaningless, if not cumbersome, for him.
+contiguous range of memory at its disposal while in truth it is loaded somewhere
+in main memory - maybe not even adjacent or complete.\\
+ In this multitude of actors we can
+consider the kernel as a process in its own right, albeit of a superior kind,
+and because it has no peers and often uses a static memory space the 
+translation mechanism is meaningless, if not cumbersome, for him.
 
 To fix this situation the ARMv8 provides a number of features. One may intuitively
 imagine different page table references for each Exception Level, but this is 
 only partially the case. \textbf{EL0} and \textbf{EL1}, the main levels of operation
-for user processes and kernel, share in fact the same page table register 
-(\textbf{TTBR0\_EL1}): the register used to properly divide user and kernel pages 
-is \textbf{TTBR1\_EL1}. Like the latter, it holds the base address of a page table;
-while \textbf{TTBR0\_EL1} is used with any normal address resolution,
- \textbf{TTBR1\_EL1} is selected when 16 most significant bits of the address 
- are set to one, forming an address that would be absurdely big for any memory 
- designed in the foreseeable future.
+for user processes and kernel, share in fact the same two page table registers:
+the one assigned to ``normal'' operation, \textbf{TTBR0\_EL1}, and the register
+ actually in charge to properly divide user and kernel pages,
+ The former is used to translate addresses in the vast majority of the
+ immense 64-bits addressing space, holding the base address of the page table
+ constructed by the developer; \textbf{TTBR1\_EL1}, the latter, works in the
+ same way but is only selected when the 16 most significant bits of the address
+ under scrutiny are set to 1, forming a location absurdely far away for any memory 
+ bank designed in the foreseeable future.
 
- The kernel can then operate in this virtual memory range with a personal page
+ The kernel can then operate in this mock memory range with a personal page
  table (possibly as an identity transformation) while normal processes live in 
- lower addresses of virtual memory. To accomodate the kernel in this inexistent
+ lower scope of virtual memory. To accomodate the kernel in this inexistent
  range the addresses in its code must be set properly. This would requires either
  a linker script instructing to compile for memory starting at 
  {\tt 0xFFFF00000000000000} (in which case the MMU must be configured and 
  enabled immediatly) or compiling the code for relative branch instructions only.
  The latter approach is considered easier as it works even if the MMU is disabled
  and only requires the kernel entry point (the exception table) to be tweaked 
- when address translation is eventually turned on.
+ when address translation is eventually turned on.\\
 
  As a side note, the condition to select the \textbf{TTBR1\_EL1} register can
  be limited to the second most significant byte of the address set to {\tt 0xFF};
@@ -1285,25 +1390,25 @@ while \textbf{TTBR0\_EL1} is used with any normal address resolution,
  \includegraphics[scale=0.6]{images/tesi11.png} 
  \caption[Kernel memory virtualization]{In this image kernel and user spaces 
  are positioned at the opposites of the address range but both are mapped in 
- the same physical area.}\label{fig:exceptions}
+ the same physical area.}\label{fig:rammap}
  \end{figure}
  %16 ExbiByte
 
 
  An example use case might be in support of object-oriented programming languages:
  as well as having a pointer to an object, it might be necessary to keep a 
-reference count that keeps track of the number of references or pointers or handles
+reference count that keeps track of the number of references, pointers or handles
  that refer to the object, for example, so that automatic garbage collection 
  code can deallocate objects that are no longer referenced. This reference 
  count can be stored as part of the tagged address rather than in a separate table, 
-speeding up the process of creating or destroying objects.
+speeding up the process of creating and destroying objects.
 
 \subsection{EL2 and EL3 Translation Process}
-The virtualization and secure levels have their own page tables. Since they act
+Virtualization and secure exception levels have their own page tables. Since they act
 as overlay for one or more guest operating systems when enabled there are two translation
 stages: the first one is performed by the OS, using \textbf{TTBR\textit{n}\_EL1}
 as already explained; the result from this stage is then fed to a second stage,
-using tables found in \textbf{TTBR0\_EL2} and \textbf{TTBR0\_EL3}.
+with tables found in \textbf{TTBR0\_EL2} and \textbf{TTBR0\_EL3}.
 
 Such complex tools are out of the scope of this work.
 
@@ -1357,19 +1462,19 @@ saved ASID correspond to present values.
 \chapter{Overview of the BCM2837}
 The BCM2837 is the System-on-Chip produced by Broadcom that is used for most
 of the Raspberry Pi family of boards, and for the third version specifically.
- Some of them are built with variants like BCM2836 (for the Rasbperry Pi 2)
+ Some of them are built with variants like BCM2836 (for the Raspberry Pi 2)
   and BCM2835 (the first used, for the Raspberry Pi 1): the scarce documentation
-  is only available for BCM2835 \cite{bcm2835} (and partly for BCM2836 \cite{rev3.4})
+  is only available for BCM2835 \cite{bcm2835} (and partially for BCM2836 \cite{rev3.4})
   allegedly because nothing changes from the developer perspective; the actual 
   differences have been figured out mostly through reverse engineering from the 
-  code of the various Linux distributions.
+  source code of various Linux distributions.
 
 The BCM2837 contains the following peripherals, accessible by the on-board ARM CPU:
 \begin{itemize}
     \item A system timer.
     \item Two interrupt controllers.
     \item A set of GPIOs.
-    \item A USB controller.
+    \item An USB controller.
     \item Two UART serial interfaces.
     \item An external mass media controller (the microSD interface).
     \item Other minor peripherals (I2C, SPI,\ldots).
@@ -1383,23 +1488,24 @@ alongside it.
 On reset the first code to run is stored in a preprogrammed ROM chip read by the GPU,
 called the first-stage bootloader. This first bootloader looks for the first
 partition on the microSD card (which has to be formatted as FAT32), mounts
-it and loads (if present) a file called bootcode.bin from the partition.
+it and loads (if present) a file called {\tt bootcode.bin} from the partition.
 This binary is part of the Broadcom proprietary firmware package, and is considered
-the second-stage bootloader.
-At this point of the boot sequence the RAM is still not initialized, so the second-stage
+the second-stage bootloader.\\
+At this point of the boot sequence the main memory is still not initialized, so the second-stage
 bootloader is run from the L2 memory cache. This firmware initializes the RAM 
-and in turn loads on it another file from the microSD card, start.elf.
-Another firmware for the Videocore, start.elf has the responsibility to split 
+and in turn loads on it another file from the microSD card, start.elf.\\
+Another firmware for the Videocore, {\tt start.elf} has the responsibility to split 
 the RAM in two parts for the GPU and the CPU; after that it reads the config.txt 
 file (if present) and loads its parameters starting at address 0x100.
  Finally it does the same with the kernel image and passes control to the ARM CPU.
 
  \begin{figure}[t]
- \includegraphics[scale=0.6234]{images/tesi1.png}
- \caption[Figure 1]{Explanatory diagram on BMC2837 boot sequence}\label{fig:prima}
+    \begin{center}
+ \includegraphics[scale=0.46]{images/tesi1.png}
+ \caption[BCM2837 Boot Sequence]{Explanatory diagram on BMC2837 boot sequence}\label{fig:prima}
+\end{center}
  \end{figure}
  \clearpage
-%TODO: add a diagram
 
 Every step up until the loading of the kernel image in memory is handled by 
 the GPU and can be safely ignored after an initial setup.
@@ -1412,13 +1518,13 @@ are just four files:
     \item \textbf{bootcode.bin}: second-stage bootloader, necessary for the GPU
             to load the third-stage bootloader.
     \item \textbf{start.elf}: third-stage bootloader, necessary for the GPU to load
-            the kernel image in RAM.
+            the kernel image into main memory.
     \item \textbf{fixup.dat}: a file containing relocation data to be referenced 
-            by start.elf when loading into RAM; This allows for the same firmware 
+            by {\tt start.elf} when loading into RAM; this allows for the same firmware 
             to be used for all versions of the Raspberry Pi, which range in 
             memory from 256MB to 1GB. If not included the board might still boot,
             but it will likely only report a total of 256MB regardless of the
-            actual installed RAM.
+            actual installed memory banks.
     \item \textbf{kernel8.img}: kernel binary for the ARM CPU.
 \end{enumerate}
 Of those four files only the kernel image is user provided; the remaining firmware
@@ -1427,43 +1533,44 @@ proprietary licensing from Broadcom.
 
 \subsection{Configuration}
 It is possible to configure in different ways the boot process by combining
-different firmware binaries and config.txt options, but this work always uses
-the default with no extra steps needed; this is to ensure the usage is kept
-as simple as possible and since the base behaviour never presented any issue.
+different firmware binaries and {\tt config.txt} options, but <name> always uses
+the default this with no extra steps needed; this is to ensure the usage is kept
+as simple as possible and because the base behaviour never presented any issue.
 Of all the available options, only the following two were ever considered 
 (but still never implemented).
 
 \subsubsection{Architecture}
-The Cortex A-53 can run both ARM32 and ARM64 code; the choice is dictated by the
+The Cortex A-53 can run both ARM32 and ARM64 code. The choice is dictated by the
 name of the kernel image: {\tt kernel8.img} makes the CPU start in AArch64 mode,
-while {\tt kernel7.img} would start in AArch32.
+while {\tt kernel7.img} would start in AArch32. The latter option is preferred.
 
 \subsubsection{Kernel Loading Address}
-The GPU loads the kernel image starting at address 0x80000 in RAM for the
-Raspberry Pi 3. By adding a config.txt file to the microSD card and using
-the kernel\_address parameter the image file will be loaded at the specified
-starting point. Similarly, by setting the kernel\_old parameter to 1 the binary
-will be loaded at the beginning of the main memory, at address 0x0.
+The GPU loads the kernel image starting at address {\tt 0x80000} in RAM for the
+Raspberry Pi 3. By adding a {\tt config.txt} file to the microSD card and using
+the {\tt kernel\_address} parameter the image file will be loaded at the specified
+starting point. Similarly, by setting the {\tt kernel\_old} parameter to 1 the binary
+will be loaded at the beginning of the main memory, at address {\tt 0x0}. This
+alias is present for compatibility reasons.
 
 Although these options can bring a more clean memory disposition, it was decided
 the advantages were not worth adding an additional file to the necessary setup.
 Additionally, while the Raspberry Pi harware correctly interprets these commands
 the Qemu emulated machine is not entirely loyal to reality and actively resists
-any attempt to move the kernel to locations other than 0x80000 (more details can
-be found in chapter 7).
+any attempt to move the kernel to locations other {\tt than 0x80000} (more details can
+be found in section \ref{qemu}).
 
 \subsubsection{Memory Split}
 As previously mentioned the two main actors on the BCM2837, the quadcode Cortex-A53 ARM
-and the Videocore IV GPU, share the same 1GiB RAM space. Without other instruction
-the start.elf bootloader fixes the separation at address 0x3C000000, keeping
+and the Videocore IV GPU, share the same 1GiB RAM space. When not instructed otherwise
+the {\tt start.elf} bootloader fixes the separation at address {\tt 0x3C000000}, keeping
 64MiB to himself and leaving the rest to the CPU.
 
 This split can be increased in favor of the GPU or minimized even further using
-specific config.txt parameters. The only graphical feat required by this work
+specific {\tt config.txt} parameters. The only graphical feat required by this work
 is the display of a simple framebuffer to present textual output; therefore
 a reserved memory partition of 64MiB is more than sufficient.
 It could be in fact reduced further to 16MiB, but as for the kernel load address 
-adding the config.txt file was judged unneded effort on the user's side.
+adding the {\tt config.txt} file was judged unneded effort on the user's side.
 
 \section{Videocore IV}
 After the control is passed to the ARM CPU it is never returned to the GPU.
@@ -1472,19 +1579,47 @@ and can carry on work under specific requests. The mean of communication
 between the two processing units is the shared RAM memory (and part of the interrupt
 controller), specifically under the Mailbox interface.
 
-\subsubsection{Mailboxes}
+\subsection{Mailboxes}
 Mailboxes are the primary means of communication between the ARM and the 
 Videocore firmware running on the GPU. A mailbox is nothing but a memory address
 with special access modes tied to an interrupt signal for the receiving end.
-Mailboxes consist of several 32 bit registers providing status information, read
-and write access. If a value is written on right the memory location and the
+Mailboxes consist of one or more 32-bits registers providing status information, read
+and write access. If a value is written on the right memory location and the
 mailbox is ready to accept data, an interrupt will be fired and the receiver
 will have the chance to read the message and act accordingly. The data is 
-usually another memory location, containing more elaborate commands and parameters.
-
+usually another memory location, whose pointer has been written into the 
+actual mailbox, containing arbitrarily long and elaborate parameters.
+ARM cores can interrupt each other by using single register mailboxes for inter
+processor communication while the relative extra cluster transmission mean have
+as many as 9 registers each, although the function of most of them is unknown.
+\begin{center}
+\begin{table}[h]
+    \begin{tabular}{|c|c|}
+    \hline
+    \rowcolor[HTML]{9B9B9B} 
+    Register Name & Function                                                                                                                                        \\ \hline
+    read          & \begin{tabular}[c]{@{}c@{}}register to be read for command responses.\\ The 4 least significant bits are the mailbox channel\end{tabular}       \\ \hline
+    reserved      & \cellcolor[HTML]{656565}                                                                                                                        \\ \hline
+    reserved      & \cellcolor[HTML]{656565}                                                                                                                        \\ \hline
+    reserved      & \cellcolor[HTML]{656565}                                                                                                                        \\ \hline
+    peek          & \begin{tabular}[c]{@{}c@{}}like the read register but does not remove the \\ value from the message FIFO\end{tabular}                           \\ \hline
+    sender        & information about the sender                                                                                                                    \\ \hline
+    status        & \begin{tabular}[c]{@{}c@{}}status register, carrying information about the mailbox\\ state (e.g. the message FIFO is empty or full)\end{tabular}\\ \hline
+    config        & unknown function                                                                                                                                \\ \hline
+    write         & \begin{tabular}[c]{@{}c@{}}register where to write a pointer to the command structure.\\ Adds the message to the GPU's FIFO.\end{tabular}       \\ \hline
+    \end{tabular}
+    \caption[Mailbox Registers]{CPU-to-GPU mailbox registers list.}
+    \end{table}
+\end{center}
 Regarding the CPU-to-GPU mailbox, additional care must be taken to check whether
 the mailbox is full or empty by inspecting the two most significant bits of 
 the status register.
+After the command has been executed the status register should be polled again
+for change and the memory structure passed to the other core will contain the
+requested information (if any).
+The Videocore accepts lists of multiple commands as messages and organizes
+responses in an ordered FIFO that is emptied by reading the mailbox until 
+the status register signals there is no more mail.
 
 The data address to be written on the mailbox must be 16 bytes aligned in memory,
 as the lowest 4 bits must be overwritten with the so called mailbox channel
@@ -1493,8 +1628,9 @@ only two channels are defined: channel 8 for requests from ARM to the Videocore
 and channel 9 for requests from the Videocore to the ARM. Apparently, channel 9
 exists but has no definied behaviour.
 
+
 The buffer whose address is written on the mailbox must contain properly structured
-data for specific requests. Some of the possible commands from the ARM to the
+data for specific requests. Some of the possible commands from the ARM CPU to the
 Videocore include:
 \begin{itemize}
     \item Get Broadcom firmware revision number.
@@ -1509,14 +1645,54 @@ Videocore include:
     \item Require and manage a framebuffer to be displayed over the HDMI.
 \end{itemize}
 
+\begin{table}[b]
+    \begin{tabular}{|c|c|}
+    \hline
+    \rowcolor[HTML]{9B9B9B} 
+    Field Size                                                  & Meaning                                                                                                                                        \\ \hline
+    32 bits                                                     & buffer size in bytes (including the header values, end tag and padding)                                                                        \\ \hline
+    32 bits                                                     & \cellcolor[HTML]{FFFFFF}\begin{tabular}[c]{@{}c@{}}holds request/response code; success or failure and number of bytes\\ returned\end{tabular} \\ \hline
+    variable                                                    & \cellcolor[HTML]{FFFFFF}list of concatenated tags                                                                                              \\ \hline
+    32 bits                                                     & \cellcolor[HTML]{FFFFFF}0x00000000 to signal message end                                                                                       \\ \hline
+    \begin{tabular}[c]{@{}c@{}}variable\\ (if any)\end{tabular} & \cellcolor[HTML]{FFFFFF}padding to 16 bytes aligned address                                                                                    \\ \hline
+    \end{tabular}
+        \caption[Mailbox Message Format]{Mailbox message format; tag structure is 
+        specified in table \ref{tab:tag}.}
+        \label{tab:mail}
+    \end{table}
+
+\subsubsection{Command structure}
+The memory pointed by mailbox messages is interpreted by the GPU in a specific
+and mostly homogeneous format (see table \ref{tab:mail}): there is an header and 
+a tail enclosing a list of tags (or commands) that can have a slightly variating
+structure but are generally regular.
+
 \subsubsection{Framebuffer}
 The HDMI controller is managed entirely by the GPU, and the ARM core has no 
 way to interact with it directly. Instead, it can ask through the mailbox
 property channel for the Videocore to set up a framebuffer in its own memory
-share and directly access it. The Videocore will then proceed to continously flush the
+share and directly access it, configuring screen resolution in the process.
+The Videocore will then proceed to continously flush the
 framebuffer's contents on the screen.
 This is a very convenient design choice, removing a great deal of effor from
 the OS developer to see output displayed on screen.
+
+\begin{table}[t]
+    \begin{center}
+    \begin{tabular}{|c|c|}
+    \hline
+    \rowcolor[HTML]{9B9B9B} 
+    Field Size                                                  & Meaning                                                                                                                                 \\ \hline
+    32 bits                                                     & tag identifier (specific 4-bytes code)                                                                                                  \\ \hline
+    32 bits                                                     & \cellcolor[HTML]{FFFFFF}value buffer size in bytes                                                                                      \\ \hline
+    32 bits                                                     & \cellcolor[HTML]{FFFFFF}\begin{tabular}[c]{@{}c@{}}request or response code (the most significant\\ bit selects which one)\end{tabular} \\ \hline
+    variable                                                    & \cellcolor[HTML]{FFFFFF}value buffer for parameters and data                                                                            \\ \hline
+    \begin{tabular}[c]{@{}c@{}}variable\\ (if any)\end{tabular} & \cellcolor[HTML]{FFFFFF}padding to 4 bytes aligned address                                                                              \\ \hline
+    \end{tabular}
+        \caption[Mailbox Tag Structure]{Mailbox tag structure.}
+        \label{tab:tag}
+\end{center}
+    \end{table}
 
 
 \section{Peripherals}
@@ -1528,8 +1704,8 @@ as if the main memory of the system extended beyond 1GiB.
 Only the peripherals that find a purpose in <name> will be explored here.
 
 \subsection{GPIO}
-The Rasbperry Pi 3 board contains 54 General Purpose Input Output pins, out of which
-only 26 are directly present on the 40 pin strip on the board. The ones that are
+The Raspberry Pi 3 board contains 54 General Purpose Input Output pins, out of which
+only 26 are directly present in the 40 pin strip on the board. The ones that are
 missing serve either internal purposes (see section \ref{emmc}) or are not used
 altogether.
 
@@ -1540,17 +1716,17 @@ is a close second to the obligatory ``Hello World'' example) and is still necess
 to set up some other devices like the EMMC and UARTs.
 A brief description of the device's memory map is included for completeness.
 \\
-There are 13 different kinds or registers in this peripheral. To accomodate for
+There are 13 different kinds or 32-bits register in this peripheral. To accomodate for
 54 GPIOs each register class can repeat a number of times, depending on how
-many bits are dedicated to a single pin (i.e. 3 bits per GPIO result into 6
-registers; a signle bit each can be covered by just two 32 bits registers).
+many bits are dedicated to the individual pin (i.e. 3 bits per GPIO result into 6
+registers; a single bit each can be covered by just two 32-bits registers).
 The GPIO memory map starts at address {\tt 0x3F200000}
 
 \begin{description}[itemsep=-1mm,leftmargin=5mm]
     \item[Function Select:] GPIOs can have 8 possible functions: input, output and
-        ``alternate function \textit{n}'', for n spanning from 0 to 5. Alternate 
+        ``alternate function \textit{n}'', for \textit{n} spanning from 0 to 4. Alternate 
         functions are relative to specific peripherals (see sections \ref{emmc} 
-        and \ref{uart}). The function is codified using 3 bits adequatly positioned
+        and \ref{serial}). The function is codified using 3 bits adequately positioned
         in the register (e.g. bits [0:2] of the first register refer to GPIO 0)
     \item[Output Set:] when GPIO \textit{n} is configured as an output the \textit{nth}
         bit of this register class can be set to pull high the corresponding
@@ -1574,11 +1750,11 @@ The GPIO memory map starts at address {\tt 0x3F200000}
     \item[Low Detect Enable:] this register ties a registered low level in a
         GPIO to a value of 1 in the corresponding bit of the event detect status
         register.
-    \item[asynchronous Rising Edge Detect Enable:] akin to the rising edge detect
-        register, but works asynchronously with respect to the system clock,
+    \item[Asynchronous Rising Edge Detect Enable:] akin to the rising edge detect
+        register but works asynchronously with respect to the system clock,
         allowing to register faster transitions.
     \item[Asynchronous Falling Edge Detect Enable:] akin to the falling edge detect
-        register, but works asynchronously with respect to the system clock,
+        register but works asynchronously with respect to the system clock,
     \item[Pull Up/Down:] internal pull up or down register. Once a value is written
         the actuation must be finalized with the next register.
     \item[Pull Up/Down Clock:] after writing to the pull up/down register the
@@ -1588,26 +1764,29 @@ The GPIO memory map starts at address {\tt 0x3F200000}
 
 \subsection{External Mass Media Controller}
 \label{emmc}
-The MultiMediaCard (MMC for short) is an open memory card standard used by the
-vast majority of devices and producers when adding considerable amounts of 
-storage to size-restricted solutions. The BCM2837 includes an MMC standard abiding
-controller provided by Arasan to access microSD cards, named External Mass Media Controller (EMMC)
+The MultiMediaCard (MMC for short) is the open memory card standard 
+the vast majority of producers turn to when adding considerable amounts of 
+storage to size-restricted solutions. The BCM2837 includes an MMC standard-abiding
+controller provided by Arasan to access microSD cards, called External Mass Media Controller (EMMC)
 in the peripheral datasheet \cite{bcm2835}.
 
 The peripheral operates with a fair degree of autonomy from both the CPU and
 the GPU. It has a configurable clock separated from the board and is accessed
 through a set of memory mapped registers. The command set accepted by the controller
 has a direct reference to the MMC standard but the device also manages independently
-the most mundane operations (i.e. calculating cyclic redundancy checksum).
+the most mundane operations (i.e. calculating cyclic redundancy checksum for
+command payloads).
 
 The creation of a driver library for this kind of device is no trivial task; it 
 was kept as simple as possible and only made possible by existing examples
-with detailed explaination, in turn extracted from a reverse engineering effort
+ in turn extracted from a reverse engineering effort
 of professional software (i.e. Raspbian and various RTOSes for Raspberry Pi).
 This is also due to the fact that the detailed description of the peripheral 
 should be found, according to Broadcom's documentation, in an elusive datasheet 
-(``SD3.0\_Host\_AHB\_eMMC4.4\_Usersguide\_ver5.9\_jan11\_10.pdf'') that instead is 
-not publicly distributed by Arasan (and thus should not have been mentioned in 
+(\textit{``SD3.0\_Host\_AHB\_eMMC4.4\_Usersguide\_ver5.9\_jan11\_10.pdf''})
+ that instead is 
+not publicly distributed by Arasan outside of their direct collaborators
+(and thus should not have been mentioned by Broadcom in 
 the first place). Consequently the author has only a vague understanding of 
 how the controller actually works.
 
@@ -1631,14 +1810,14 @@ have it ready to receive directives.
 
 In no particular order during this process interrupts should be enabled to 
 avoid euristic delays when waiting for a response. The device signals interrupt
-lines through a couple of dedicated registers that can be polled for activity. 
-It is unclear whether those same interrupts can be routed to the ARM handlers:
+lines through a couple of dedicated registers that can be polled for activity but
+it is unclear whether those same interrupts can be routed to the ARM handlers:
 to the best of the author's efforts it was not understood (and ultimately unnecessary
 for proper functioning of the system, given that the abstraction layer does not
 expose direct access the the EMMC).
 
 \subsubsection{SD Commands}
-Sending a specific command to the controller is in itself a complex routine. First,
+Sending a specific command to the controller is a complex routine in itself. First,
 a status register should be inspected to check if the command line is still being
 used by a previous order; then the command code and arguments can be passed to 
 the corresponding registers.
@@ -1649,13 +1828,13 @@ read to know the result.
 \subsubsection{Reading or Writing a Block}
 The microSD card is both read and written in 512 bytes long memory blocks. After
 checking if the data line is free via the status register the controller should
-be notified of the block size (512) and number that compose the data transfer.
+be notified of the block size (512 bytes) and number that compose the data transfer.
 
 Different commands can be given to the controller depending whether the operation
 is a read or write and if it is comprised of one or multiple blocks; regardless,
 starting block index should be passed as argument. When everything
-is ready the data register can be read or written; each access will push the seek
-index forward by 8 bytes (the size of the register), and a final specific command
+is ready the data register can be read or written and each access will push the seek
+index forward by 8 bytes (the size of the register). A final specific command code
 will instruct the transfer to cease.
 
 
@@ -1668,22 +1847,22 @@ are externally accessible on the Raspberry Pi. This means that, at any time,
 either of those pins can be connected and work for only one of the two serial
 interfaces.
 Even if this is undoubtedly a limitation it can pose an interesting
-concurrency programming challenge for a student, as both can run successfully if 
-properly alternated.
+concurrent programming challenge for a student, as both can run successfully if 
+hardware settings are properly alternated.
 
-Those devices bear a strong similarity to $\mu$MPS' terminal devices, both having 
-similar registers to check the current status and read or write character on the
+Those devices bear a strong similarity to $\mu$MPS2's terminal devices, both having 
+similar registers to check the current status and read or write a character on the
 interface. For this reason, except for the initialization of the peripheral
 which is done entirely by the harware abstraction layer, they are left essentially
  untouched to be managed by students approaching the project. In comparison to 
  the emulated devices the only real difficulty lies in a less organized register
- structure, having about four registers scattered over a larger memory area instead
- of a compact structure; after providing a focused and complete documentation of 
+ format, having about four registers scattered over a larger memory area instead
+ of a compact structure. After providing a focused and complete documentation of 
  said registers, this complication should be easily overcome.
 
  \begin{figure}[t]
  \includegraphics[scale=0.143]{images/tesi2.jpg}
- \caption[Figure 2]{Highlight of UART reserved GPIOs}\label{fig:seconda}
+ \caption[Raspberry Pi UART pins]{Highlight of UART reserved GPIOs}\label{fig:seconda}
  \end{figure}
 
 \subsubsection{UART0}
@@ -1691,7 +1870,7 @@ The UART0 is a fully fledged asynchronous serial interface, abiding to the
 PL011 ARM specification \cite{pl011}. To properly run on real hardware, the
 corresponding pins must be configured to use the alternate function number 0 with
 no internal pull up or down.
-Its register are located starting at the address 0x3F201000, each of them
+Its register are located starting at the address {\tt 0x3F201000}, each of them
 is 32 bits wide and they are organized as follows (some unimportant ones are omitted for brevity):
 \begin{description}
     \item[Data:] this register contains the first character present in 
@@ -1730,7 +1909,9 @@ hardware abstraction layer and should not be changed.
 
 The serial interface is configured as 8 bit wide, no parity bit and with
 a baudrate of 115200. The FIFOs are disabled for simplicity, so they act like 
-a one character deep buffer.
+a 1-character deep buffer.
+
+\newpage
 
 \subsubsection{UART1 or Mini UART}
 The UART1 is part of the group of auxiliary peripherals, together with two SPI
@@ -1740,11 +1921,11 @@ provide framing error detection or parity bit management, features that are eith
 disabled or ignored even in its more complete counterpart.
 To properly run on real harware, the corresponding pins must be set to use the
 alternate function number 5 with no internal pull up or down.
-Its registers are located starting at the address 0x3F215040, each of them is 32 bits
+Its registers are located starting at the address {\tt 0x3F215040}, each of them is-32 bits
 wide and they are organized as follows (some unimportant ones are omitted for brevity):
 
 \begin{description}
-    \item[IO:] reading from this register yield the first character present in the
+    \item[IO:] reading from this register yields the first character present in the
             receive FIFO, while writing it inserts the data into the write FIFO.
     \item[IIR:] register for enabling receive and transmit interrupts. If the first
             bit is set an interrupt line is asserted whenever the transmission FIFO
@@ -1754,7 +1935,7 @@ wide and they are organized as follows (some unimportant ones are omitted for br
     \item[LCR:] controls whether the Mini UART works in 8 bit or 7 bit mode.
     \item[LSR:] line control status; used to determine if the device is ready to 
             accept new data or if there are received characters to be read.
-    \item[CNTL:] control register to enable (in a separate fashion if so requested)
+    \item[CNTL:] control register to enable (in a separate fashion if so desired)
             the receive and trasmit lines.
     \item[BAUD:] 16 bit baudrate counter, to be set directly to the desired value.
 \end{description}
@@ -1762,11 +1943,13 @@ Again, since the abstraction layer takes care of the initialization procedure
 the user should really care about four registers: IO, IIR, IER and LSR.
 The serial configuration is the same as the UART0.
 
+\newpage
+
 \section{Interrupt Controller}
 \label{gic}
 The BCM2837 SoC has at least two devices acting as interrupt controllers. One of 
 them is clearly defined in the peripheral datasheet \cite{bcm2835}, while the
-other is not clearly named but hinted at thorugh register definition in a later 
+other is not clearly identified but hinted at thorugh register definition in a later 
 revision \cite{rev3.4}. Those are here arbitrarily named Base Interrupt Controller (BIC)
 and Generic Interrupt Controller (GIC).
 These two interrupt controllers are cascaded, meaning that 64 interrupt lines are 
@@ -1776,13 +1959,12 @@ and USB.
 
  \begin{figure}[h]
  \includegraphics[scale=0.55]{images/tesi3.png}
- \caption[Figure 3]{BCM2837 interrupt controllers configuration}\label{fig:interrupt}
+ \caption[Interrupt Controllers]{BCM2837 interrupt controllers configuration}\label{fig:interrupt}
  \end{figure}
-From a practical standpoint there are often serveral registers indicating which interrupt
-line is being asserted at any moment. There is no apparent drawback in ignoring most
+From a practical standpoint there are often several redundant registers indicating which interrupt
+line is being asserted at any given moment. There is no apparent drawback in ignoring most
 of them and just reading each device-specific register to discern which source fired
-the exception.
-The general interrupt organization is very confused and obscure. Interrupt functionality
+the exception, as the general interrupt organization is very confused and obscure. Interrupt functionality
 was achieved mainly through examples and reverse engineering regarding the specific
 device taken in consideration at the time.
 What follows is a brief listing of interrupt related configuration for the devices
@@ -1799,6 +1981,8 @@ used in this work.
         depicted from the documentation, its presence can be understood from the 
         corresponding register in the Generic Interrupt Controller (as indicated
         by \ref{fig:interrupt}).
+    \item[EMMC] Its interrupt lines are asserted by a device-specific register and
+        seemingly nowhere else.
 \end{description}
 
 \subsection{Inter Processor Interrupt (IPI)}
@@ -1810,9 +1994,9 @@ Similarly to the interface between ARM and Videocore there are mailboxes between
 the four cores of the CPU as well.
 
 The operation of those inter core mailboxes is much more straightforward than the
-CPU-GPU counterpart. There are four for each core and for each mailbox the GIC
-exposes three types control registers, for a total of 36 registers 
-\footnote{Note: the first kind of register cover all four mailboxes for each core}.
+CPU-GPU counterpart. There are four mailboxes for each core and for each one the GIC
+exposes three classes of control registers, for a total of 36 registers 
+\footnote{Note: the first kind of register covers all four mailboxes for each core}.
 \begin{description}
     \item[Mailbox Control] four registers of this type in total, one for each core
         and covering its four mailboxes. They enable an interrupt or fast interrupt
@@ -1825,7 +2009,7 @@ exposes three types control registers, for a total of 36 registers
         Write-Set register. They can be read to receive the data sent by writing
         in the Write-Set register, and have to be written to disarm the interrupt
         line. Each bit of the register is independent in firing the interrupt, so 
-        to completely clear the same content that was read from the register must
+        to completely clear it the same content that was read from the register must
         be written back on it.
 \end{description}
 
@@ -1873,7 +2057,7 @@ metal environment, leaking some imperfections on the exposed controls.
 \section{Emulated Device Interface}
 \label{emulatedinterface}
 Initially emulated devices were made accessible via fake registers: simple pre-established
-memory locations that were frequently polled by the abstraction layer.
+memory locations that were frequently polled (once every 100 $\mu$s) by the abstraction layer.
 Though most similar to the $\mu$MPS2 approach, this idea had significant flaws.
 \begin{itemize}
     \item fake registers had no read or write limitations; location that should
@@ -1909,12 +2093,12 @@ a register structure for the selected device.
 
 \begin{figure}[h]
 \includegraphics[scale=0.571]{images/tesi5.png}
-\caption[Figure 5]{mailbox structure}\label{fig:mailbox}
+\caption[Mailbox Structure]{Mailbox structure}\label{fig:mailbox}
 \end{figure}
 
 This should remind the reader of the mailbox communication protocol used by ARM
-to talk with the Videocore, with the channel number encoded in the four least significant
-bytes. Since it is a mechanism already present in the system it fits naturally
+to talk with the Videocore, with the channel number encoded in the 4 least significant
+bits. Since it is a mechanism already present in the system it fits naturally
 in the development process.
 
 The ``register'' structure that should be pointer by the mailbox address is nearly 
@@ -1932,7 +2116,7 @@ identical to the device register layout in $\mu$MPS2 and $\mu$ARM.
     3        & base+0xC  & DATA1      & 32 bits \\ \hline
     4        & base+0x10 & MAILBOX    & 32 bits \\ \hline
     \end{tabular}
- \caption[Table 1]{device register layout}\label{tab:reg}
+ \caption[Device Registers Layout]{Device registers layout}\label{tab:reg}
 \end{center}
 \end{table}
 
@@ -1952,9 +2136,10 @@ and parsed the registers it copies the internal state of the device onto the
 provided memory location, populating all of its fields.
 
 After receiving the mailbox the abstraction layer sets the \textbf{MAILBOX} field
-to 1. This however does not mean the operation has been finished successfully, as 
+to 1. This however does not mean the operation has been finished successfully, because 
 real world devices take time to operate; as such, there are fabricated delays between
-commands and execution.
+commands and execution. Both the initial interrupt and the subsequent delay are 
+handled at \textbf{EL1} by fast interrupts.
 
 Once the execution is complete an interrupt is asserted. Interrupt lines for emulated
 devices are emulated as well with a memory location allocated for the task, at 
@@ -1971,7 +2156,7 @@ base address {\tt 0x0007F020}.
     2                 & base+0x2 & Tape         & 8 bits \\ \hline
     3                 & base+0x3 & Printer      & 8 bits \\ \hline
     \end{tabular}
- \caption[Table 2]{emulated interrupt lines}\label{tab:reg}
+ \caption[Emulated Interrupt Lines]{emulated interrupt lines.}\label{tab:reg}
 \end{center}
 \end{table}
 
@@ -1979,13 +2164,13 @@ Interrupt lines for emulated devices are nothing more than an array at a specifi
 memory address that is kept updated by the abstraction layer. Whenever an operation
 terminates a bit is set for the user to clear; until that happens interrupts will
 keep being raised in the form of a zero-delay timer (i.e. until there is an emulated
-interrupt line asserted se a timer for 0 microseconds in the future, ensuring
-the kernel responsibility to clear it).\\
+interrupt line asserted the abstraction layer sets a timer for 0 microseconds 
+in the future, ensuring the kernel responsibility to clear it).\\
 
 The next sections are dedicated to the specific device classes. The interface and
 operating rules were copied almost identically from $\mu$MPS2, so the interested
 reader is redirected to its documentation for the details \cite{pop}; here are listed
-some implementation peculiarities and shortcomings for each type.
+some general informations and implementation peculiarities.
 
 In addition to the commands defined in $\mu$MPS2 there is another recurring instruction,
 the \textbf{READ\_REGISTERS}, an alias for the value codified as {\tt 2}. This
@@ -1995,6 +2180,49 @@ without causing any effect on the peripheral.
 
 The next chapter covers in greater detail the inner mechanisms of the emulated 
 devices.
+
+\section{Printers}
+<name> supports up to four parallel printer interfaces able to transmit a 
+single byte of data at a time. Characters sent to a printer are displayed on 
+the HDMI connected display in the printer's section.
+The data structure expected by the abstraction layer is the same as every other
+device (see table \ref{tab:reg}) despite the \textbf{DATA1} field not being used.\\
+When the device writes receives a mailbox message and copies its state into the
+register structure \textbf{STATUS} is updated with the current state of the device
+(busy, ready, under error condition). Even an unrecognized or impossible command will
+ result in this update, albeit followed by the proper error condition.\\
+The \textbf{COMMAND} fields accepts directives to reset, acknowledge, print a
+character or read the current registers. Commands issued while the peripheral
+is busy will be ignored.\\
+The printer's interface maximum throughput is 125 KB/sec.
+
+\section{Disks}
+<name> supports up to four readable and writable disk devices. The disk current
+position is indexed by a combination of head, cilinder and sector to select
+4KiB blocks of persistent storage memory.
+Reading \textbf{DATA1} always returns the geometry of the installed disk: maximum
+number of cylinders, heads and sectors.\\
+When reading or writing a block the register structure should specify a pointer
+to an adequately spaced memory range in \textbf{DATA0}. Disks are DMA operated, so the abstraction
+layer will take care of moving requested information to or from the medium.\\
+Whenever a command is issued the \textbf{COMMAND} field should be filled with
+additional arguments, like the cylinder to reach or sector and head to read from.
+
+The disk write and read speed are dependant on the (emulated) hardware and can 
+be configured for each device before installing it.
+
+\section{Tapes}
+Tape devices are very similar to disks, with the two major differences being they
+are read only and are accessed in a sequential fashion.
+They are organized in 4KiB blocks as well, with each block terminating in a
+4-bytes marker that is copied into \textbf{DATA1}. After a reset it reads 
+\textit{TAPE START} and changes after reading a block or otherwise moving the
+head. \\
+Possible values for markers are \textit{END OF BLOCK}, \textit{END OF FILE}
+and \textit{END OF TAPE}. They are used to navigate among the files that have
+been assembled together when creating the tape.\\
+Like disks they are DMA-operated and \textbf{DATA0} should contain a pointer 
+to the memory block to populate.
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Project Internals}
@@ -2014,7 +2242,7 @@ Besides creating a convenient abstraction layer, the whole code base is written
 with the goal of being an understandable example of bare metal development. Particular 
 care is taken in making sure that every function is readable and understandable
 with a single glance even out of context and in using descriptive, self-explanatory
-names. Where deemed necessary, comments help to further exaplain what is happening.
+names. Where deemed necessary, comments help to further clarify what is happening.
 
 Source files can be grouped in three main categories. First, the core of the abstraction
 layer is comprised basically of the assembler entry point, the C entry point and
@@ -2054,7 +2282,7 @@ language to configure the build process it relies on an already existing one, we
 received and praised for its approachable syntax: Python.
 
 In fact, Scons can be assimilated to a Python library for declaring build dependency
-trees. Its philosophy is similar to make but brings a much cleaner syntax and 
+trees. Its philosophy is similar to Make but brings a much cleaner syntax and 
 user control over the process. 
 
 \subsection{Linker Script}
@@ -2074,7 +2302,7 @@ The first operations are:
         timer registers.
     \item Setting a separate stack for each core for internal interrupt handling.
     \item Enabling AArch64 execution state.
-    \item Moving the execution level to \textbf{EL1} \footnote{The Rasbperry Pi 3
+    \item Moving the execution level to \textbf{EL1} \footnote{The Raspberry Pi 3
      starts in \textbf{EL2}, while Qemu initially runs at \textbf{EL3}}.
     \item Setting up interrupt handling routines.
     \item Preparing execution for all cores: while the first core jumps to C code,
@@ -2091,7 +2319,7 @@ From there control is passed to C, with another series of initialization routine
     \item Every emulated device is initialized, building on the real hardware.
     \item Cores 1, 2 and 3 are unlocked from their parked state and set to 
         run an infinite wait loop.
-    \item The user provided {\tt main} is called.
+    \item The user provided {\tt main} function is called.
 \end{enumerate}
 
 \section{Interrupt Management}
@@ -2110,15 +2338,20 @@ The {\tt main} function is assumed to never return; inside it the user should
 prepare an appropriate time slice and then start executing the first process.
 The time slice is set using the {\tt setTIMER()} function.
 Note that {\tt setTIMER()} does not interacts with the ARM timer directly but 
-through an internal queue of virtual timers.
- Once the time slice is over the internal interrupt handler is called. It is 
- responsible for operating emulated devices, but other than that immediatly
+through an internal delay system; since the physical ARM timer interrupt is also
+used to ensure interrupts are fired on emulated interrupt lines sometimes a
+0 $\mu$s delay is set. To avoid losing the user requested timer a simple array 
+holds the next delay for every core and is restored when no more virtual 
+lines are pending.
+
+ Once the time slice is over the internal interrupt handler is called. 
+ It checks for real or emulated pending interrupt lines and immediatly
  passes control to the user defined interrupt handler.
 
  \begin{figure}[h]
     \begin{center}
  \includegraphics[scale=0.8]{images/tesi6.png}
- \caption[IRQ switch]{Interrupt handling schematic}\label{fig:irq}
+ \caption[IRQ Switch]{Interrupt handling schematic}\label{fig:irq}
     \end{center}
  \end{figure}
 
@@ -2135,14 +2368,15 @@ The abstraction layer does mainly two things before passing control to the user:
         significantly the whole virtual memory system.
 \end{enumerate}
 This meddling has a relatively negligible drawback: the interrupt routine is forced
-to corrupt two general purpose registers. The conscribed registers are \textbf{X27}
+to corrupt two general purpose registers.
+ The conscribed registers are \textbf{X27}
 and \textbf{X28}, and they should not be used for other purposes.
 
 \section{Emulated Devices}
 \label{emulateddev}
 The idea behind emulated peripherals and their fabricated interface 
-have already beed described in Chapter \ref{emulated}. Here we give a more detailed 
-presentation about the principle under which they work.
+has already beed described in Chapter \ref{emulated}. Here we give a more detailed 
+presentation about the principles under which they work.
 
 A command to an emulated device is issued through a mailbox. For coherency reasons
 interrupts are however disabled at execution level \textbf{EL1} (the execution
@@ -2156,15 +2390,17 @@ the abstraction layer can disable the former and enable the latter.
 
 Some commands require a two-step management to more closely resemble a real peripheral.
 The first step is the fast interrupt, and is present for every command. For longer
-operations a timer is set to be executed by a normal interrupt after a certain amount
-of time.
+operations a virtual timer (different from the physical timer used through the
+{\tt setTIMER()} function) is set to be executed by another FIQ interrupt after 
+a certain amount of time.
 
 \subsection{Tapes and Disks}
 Tapes and Disks are very similar in their underlying functionality. While tapes 
 are read-only and are accessed in a sequential fashion, disks can be written and
-read at random. Their content is transferred as queried through a DMA system.
-The tape can be viewed as a sequential list of 4KiB blocks. Each block is followed
-by a marking 4 bytes delimiter denoting the content of the underlying block.
+read at random. Their content is transferred as queried through a DMA system.\\
+The tape can be viewed as a sequential list of 4KiB blocks, each block followed
+by a marking 4 bytes delimiter denoting the nature of its content (last block of 
+a file, last block of the tape or neither of those).
 The disk on the other hand has blocks organized with a three dimensional indexing
 that reproduces a head-cylinder-sector disposition.
 
@@ -2175,9 +2411,9 @@ finish on the spot, while operations like moving the device and reading/writing
  a block are postponed for a few milliseconds.\\
 
 The actual content of both tapes and disks is saved as a file on the SD card. When the system 
-boots it looks for files named {\tt TAPEn} and {\tt DISKn}(where n is an index from 0 to 
-3) and considers them as installed. 
-The file format for a tape file is identical to the one used by $\mu$MPS2: 
+boots it looks for files named {\tt TAPEn} and {\tt DISKn}(where \textit{n}
+ is an index from 0 to 3) and considers them as installed. 
+The file format for a tapes and disks is identical to the one used by $\mu$MPS2: 
 \begin{itemize}
     \item Tapes have a 4-bytes identifier right at the beginning, then 
         a list of 4 KiB blocks paired with yet another 4 bytes of ending marker.
@@ -2191,7 +2427,7 @@ distributed with $\mu$MPS2, {\tt umps2-mkdev}.
  \begin{figure}[t]
     \begin{center}
  \includegraphics[scale=0.65]{images/tesi13.png}
- \caption[Execution thread]{The user provided kernel might realize there are some
+ \caption[HAL Execution Thread]{The user provided kernel might realize there are some
  ``gray zones'' in its execution time when the SD card is accessed. Proportions
  in the figure are exaggerated.}
  \label{fig:executionthread}
@@ -2235,25 +2471,22 @@ to allocate more blocks on the file system.
 
 \subsection{Timer Queue}
 The second step of some device commands is scheduled for execution after a while;
-since there is only one timer in the system to fire scheduled interrupts, this would
-eventually overwrite other pending timers (namely the process time slice).
-To prevent this internal timers uses a set of queue managing functions to 
-schedule multiple timers at once. The ROM function {\tt setTIMER()} itself
-just pushes a new timer onto the queue.
+since there is only one virtual timer at \textbf{EL1} to fire scheduled interrupts, this would
+eventually overwrite other pending timers. The physical timer is already allocated
+to schedule time slices, and two interrupts would not be enough anyway.
+To prevent this <name> uses a set of queue managing functions to 
+schedule multiple virtual timers at once. 
+The ROM function {\tt setTIMER()} does not interact with the queue, but uses
+the physical timers instead.\\
 The queue is kept ordered from the first timer that will occur to the last.
-When a interrupt is fired all the timers that were scheduled before the
+When an interrupt is fired all the timers that were scheduled before the
 current time are popped out of the queue, and the first remaining element (if any)
 is scheduled again.
 
-The interrupt line of the ARM timer is actually tied to a class of devices that
-can be pushed into this timer queue. A new timer is pushed using {\tt setTIMER()}
-and the line is asserted when it is reached.
-
-Note that the {\tt setTIMER()} does not necessarily schedule the requested timer
-for an interrupt. First, it checks whether there are other, closer timers
-in the near future; then it also reads the emulated interrupt lines for pending
-interrupts: if there is one, a phony ``0 microseconds'' timer is scheduled to 
-ensure that those lines are serviced as soon as possible.
+When a virtual timer for an emulated device is served it is likely that the
+corresponding interrupt line will be asserted following command completion. 
+For this purpose a phony ``0 microseconds'' \textbf{physical} timer is scheduled to 
+ensure that the line is serviced as soon as the FIQ terminates.
 
 Interestingly, the implementation of this module is heavily inspired by the 
 solution to phase 1 of the KayaOS project, covering process and semaphore queues.
@@ -2283,7 +2516,7 @@ One of the improvements brought by $\mu$MPS2 over $\mu$MPS was the possibility
 of having it disabled for the first phases of the project, since the real 
 MIPSEL architecture had the virtuam memory translation constantly active.
 In truth, there is little reason in practice to turn off such a feature: a microprocessor
-is born to run an Operating System, and every Operating System worthy of it name
+is born to run an Operating System, and every Operating System worthy of its name
 virtualizes memory for its processes. A smoother learning curve is quickly 
 sacrified for the sake of efficiency.\\
 Possibily because ARM lives in a world closer to embedded, low power, low resources,
@@ -2313,10 +2546,11 @@ because its entry point did not pass through the ``rigged'' \textbf{VBAR} regist
 therefore the TLB cache will contain entries from the kernel page table.
 The very last instruction before using {\tt eret} to switch to \textbf{EL0} loads
 the new \textbf{TTBR0}. Even so, the {\tt eret} instruction will fetch the
-new, user level page entry and cause an instruction abort for security reasons.
-To avoid this one must make sure to call {\tt LDST()} through \textbf{TTBR1},
+new, user level page entry while still running as the kernel and
+ cause an instruction abort for security reasons.
+To avoid this, one must make sure to call {\tt LDST()} through \textbf{TTBR1},
 which can be achieved by jumping to the address of {\tt LDST} plus the most significant
-two bytes of the 64-bit register. In this way the kernel tables will be used 
+two bytes of the 64-bits register. In this way the kernel tables will be used 
 until the user process is actually running.\\
 Note that this problem should not present itself if the process' code is loaded
 in a different memory block. Nevertheless it is a theoretical inconsistency and
@@ -2367,6 +2601,12 @@ Those functions include:
     \item[HALT()]: terminates the calling core execution, stopping in an endless loop.
     \item[PANIC()]: similar to \textbf{HALT()}, prints a kernel panic message before
         stopping.
+    \item[WAIT()]: pauses execution until an interrupt occurs. Normally this is 
+        achieved by the {\tt wfi} Assembly instruction; under <name> however multiple
+        interrupts (FIQ) are fired without the user knowing, so the single instruction
+        would be unreliable. The \textbf{WAIT()} function works because it checks
+        on a spinlock opened by the abstraction layer when a real interrupt is 
+        reached.
     \item[LDST(void *addr)]: Load State function call. Reads the address to load
         a system state: general purpose and system registers to resume execution
         of a saved process. Used by the kernel to context switch to a process.
@@ -2399,7 +2639,7 @@ standalone executable to be loaded in RAM for the most advanced phases of Kaya
 this is not contemplated, as it would link the whole HAL to every binary.
 In this case it is left to the student to implement ROM functions: in reality, only
 \textbf{SYSCALL} is needed for a normal process, and it has a one line implementation.
-
+\newpage
 \begin{lstlisting}[label={lst:state},caption={Process state format},language=C]
 typedef struct _state_t {
     uint64_t general_purpose_registers[29];
@@ -2436,13 +2676,15 @@ slice set as timer interrupt. The memory address from where processes can use
 stack starts where the kernel ends; said value is provided for convenience by 
 the {\tt \_kernel\_memory\_end}, defined in the linker script.
 
- \begin{figure}[ht]
+ \begin{figure}[h]
     \begin{center}
  \includegraphics[scale=0.55]{images/tesi14.png}
  \caption[Memory Map]{Memory locations for interrupt old areas, handlers 
  and stack pointers}\label{fig:memmap}
     \end{center}
  \end{figure}
+
+ \newpage
 
 \section{Exceptions}
 By default, exceptions are handled at \textbf{EL1}. Control is given to the 
@@ -2483,6 +2725,8 @@ routines based on the executing actor. Old areas where states are saved and stac
 pointers on the other hand are defined in a per-core basis. Every core can have
 its exceptions and handle them accordingly.
 
+After reset and initialization cores 1, 2 and 3 are left stuck in a wait loop and
+should be moved from there using core mailboxes to trigger interrupt handlers.
 Inter Processor Interrupts (IPI) are completely transparent and work as defined
 by the ARMv8 specification. The only exception is the first mailbox of the first
 core, reserved for emulated peripheral management. Data written to this mailbox
@@ -2501,7 +2745,7 @@ built in serial interfaces, UART0 and UART1.
 Section \ref{serial} describes in greater detail the register configuration for
 said devices. Although clearly more complex and convoluted when compared to the
 clean interface for $\mu$MPS2 emulated devices, it is believed the handful of 
-registers needed to use UART1 and UART0 is still well within reach for a cumputer
+registers needed to use UART1 and UART0 is still well within reach for a computer
 science undergraduate student. Similarly to flying a plane, the hardest
 part is taking off, and device initialization is already prepared by the abstraction
 layer when the user kernel gains control.\\
@@ -2519,18 +2763,44 @@ bits are used to index the device the command is meant for.
 
 \section{Memory Management Unit}
 The MMU operation is described in depth in chapter \ref{mmu}. It is a complex 
-device, unsuitable for undergradates. However this complexity is, in the author's opinion,
+device, unsuitable for undergradates. This complexity is, in the author's opinion,
 very much intrinsic in the nature of virtual memory management, and little can
-be done to ease it; even if possible it would not make sense to further semplify it, as 
-it would lose most of its value.
-Therefore, the MMU interface has been left mostly untouched by the abstraction layer.
+be done to ease it; even if possible it would not make sense to further simplify it as 
+it would lose most of its educational value.
+Therefore, the MMU interface has been left mostly untouched by the abstraction layer.\\
 The sole real interference is copying \textbf{TTBR1} into \textbf{TTBR0} when 
 handling an exception to make sure the memory can be accessed without trouble 
 even at \textbf{EL1}. If this was not the case the kernel could end up receiving 
-entry results of the process that was paused.
-Other than that, ASIDs and page tables are entirely managed by the user. Still,
+entry results of the process that was paused.\\
+This passage is made essential by the fact that the MMU should be easily turned
+on and off without changing too much of the original code. Real OSes like
+Linux simply enable virtual addresses from the beginning and load the kernel
+code at the far end of memory, where \textbf{TTBR1} is referenced for page tables.
+Moreover, Qemu does not allow for loading addresses other than the default 
+{\tt 0x80000}. \\
+
+Other than that, the MMU is entirely managed by the user, even if
 registers should not be directly accessed and instead modified only through 
 {\tt initMMU()} and {\tt isMMUACTIVE()} ROM functions.
+Just like $\mu$MPS2, how far one should go into implementing virtual 
+memory policies is up to the professor or course using this tool. For
+example:
+\begin{itemize}
+    \item Page tables support a Dirty Bit Modifier field; when an entry is found
+        (either in the TLB cache or after a table walk) that has the DBM bit 
+        cleared an MMU fault is raised expecting the software to handle the
+        situation and re-try the same memory request. This is usually used 
+        to only load memory blocks in memory when they are accessed, thus
+        allocating less physical memory for each process.
+    \item To avoid confusion where multiple processes find the same cached entries
+        in the TLB each one of them should be paired with an ASID copied to the
+        \textbf{TTBR0} register. If page entries are then marked as non-global
+        using the \textit{nG} bit a TLB search hits only if the current ASID is equal
+        to the one saved with the entry.
+    \item In an exaggerated simplification the TLB cache can be flushed every time
+        a context switch occurs. In this situation no ASID is needed as the stale
+        entries are just wiped before they can cause issues.
+\end{itemize}
 
 Note that the memory management unit configuration is set on a per-core basis:
 there can be cores where virtual memory is enabled and active, and others where
@@ -2548,7 +2818,8 @@ its linker script, to be used to link an application to the hal.
 
 The hal performs all the necessary routines and then calls a {\tt main} function.
 There is a weak-defined {\tt main} included with the hal that just echoes every
-character received on UART0.
+character received on UART0 that is supposed to be overwritten by a new {\tt main}.
+symbol.
 From there, the user provided code is expected to write specific memory addresses
 to define new exception handlers and control emulated devices. 
 
@@ -2586,7 +2857,7 @@ Each command option has its own meaning:
     \item[-O0] is the optimization level; here it is 0, with no optimization at all.
         One might specify other levels, but in a project where the focus is on 
         the learning experience and not in performance compiler meddling should 
-        be kept to a minimum
+        be kept to a minimum.
     \item[-g] includes debugging symbols into the executable.
     \item[-march=aromv8-a] specifies the target architecture.
     \item[-mtune=cortex-a53] specifies the target processor.
@@ -2615,6 +2886,7 @@ The resulting binary can then be placed on a microSD card and run on a Raspberry
 or on Qemu.
 
 \section{Qemu}
+\label{qemu}
 Since version 2.12 Qemu supports a Raspberry Pi 3 emulated machine.
 The official version for the Linux distro of choice may be less recent, in 
 which case the user needs to compile the package from source.
@@ -2635,6 +2907,10 @@ Some examples found along the way are:
         Failing to set the device area as device memory will be forgiven on Qemu
         as there are no real peripherals; instead, the Raspberry Pi board will most likely
         not behave as expected.
+    \item Similarly to the previous example, while to operate both serial interfaces
+        on real hardware one must switch GPIO configuration as they both use the
+         same pins, Qemu will allow the two consoles to print and read as if on 
+         separate lines without swapping between hardware setup.
     \item Qemu is whimsical about the memory address where to load the kernel image.
         The emulator's boot sequence is different from the real device as the
         {\tt kernel8.img} file is not read from the microSD card but passed from
@@ -2643,7 +2919,7 @@ Some examples found along the way are:
         script the kernel will fail to run.
 \end{itemize}
 
-Note that, beside those immediate differences, emulator and hardware can behave
+Note that, beside those immediate idiosyncrasy, emulator and hardware can behave
 differently while still being both correct. Quoting a Qemu developer,
 
 \begin{quote}
@@ -2658,7 +2934,7 @@ defines as IMPLEMENTATION DEFINED or UNPREDICTABLE.)''}
 
 One brilliant example of this situation can be found in TLB behaviour. A cached
 page table entry can live inside the TLB for an arbitrary amount of time, extremities
-included: it is architecturally correct \textbf{both} immediately discard it or 
+included: it is architecturally correct to \textbf{both} immediately discard it or 
 keep it forever. 
 In an early test of virtual memory translation, a single process was made to run
 at \textbf{EL0} after being launched by the kernel from \textbf{EL1}. Kernel and
@@ -2680,7 +2956,7 @@ the TLB. When any \textbf{TTBR} register changes the entire TLB cache is flushed
 behind the scenes, immediately deleting any stale entry.
 The code was wrong, but it happened to run anyway on the emulator.
 
-To fix the example ASID were used, setting a different ID for kernel and process
+To fix the example ASIDs were used, setting a different ID for kernel and process
 tables. This time however the parts were inverted: the real Raspberry Pi 3 board
 started working while Qemu was constantly stuck into abort exceptions.
 Again, the bug was due to the same TLB difference: between swapping \textbf{TTBR0}
@@ -2692,7 +2968,7 @@ On the Raspberry Pi 3 the same code still ran fine, probably because the change
 in \textbf{TTBR0} had yet to be registered before the context switch and the
 kernel was still hitting the correct TLB cached entries.
 The final solution was to run the kernel code at address {\tt 0xFFFF000000000000}
-to make sure \textbf{TTBR1} was always used.\\
+to make sure \textbf{TTBR1} was always selected.\\
 
 %TODO: image
 
@@ -2747,7 +3023,8 @@ running and debugging interface; nonetheless, a GDB server is a complete and
 advanced debugging suite. The command line debugger may seem a scarce alternative,
 but there are plenty of richer options; the author recommends {\tt gdbgui}, 
 a browser-based Python GDB client.
-Gdbgui can be installed via {\tt pip} or as an official package. It must be launched
+Gdbgui can be installed via {\tt pip} or as an official package, depending on 
+the Linux distribution. It must be launched
 with the {\tt --gdb} (or {\tt -g}) command line option to specify a proper GDB
 client (i.e. the one found within the ARM64 toochain); it acts as a web server
 reachable at the default port {\tt 5000} with any browser, and provides an intuitive
@@ -2765,7 +3042,7 @@ When MMU is enabled the entry point for interrupt handlers in the form of the
 \textbf{VBAR} register is shifted at address {\tt 0xFFFF000000000000}; the rest
 of the kernel only uses relative references, so everything works.
 However if the user is debugging the kernel he or she will become unable to break
-execution on kernel code; logically, having moved all addresses 16 ExbiByte forward
+execution on kernel code; logically, having moved all addresses 16 ExbiBytes forward
 GDB will have an hard time finding symbols. To fix references again one must
 load the elf symbol table with the same offset, using the following GDB command:
 
@@ -2775,12 +3052,12 @@ load the elf symbol table with the same offset, using the following GDB command:
 
 Note that this directive too can be added to {\tt .gdbinit}. There is no 
 obvious drawback to loading the symbol table at two separate offsets (the first
-one being {\tt 0x0}); in this way breakpoints will work regardless of the MMU.
+one being {\tt 0x0}); in this way breakpoints will work regardless of the MMU state.
 
 
  \begin{figure}[t]
  \includegraphics[scale=0.34,angle=-90,origin=c]{images/tesi4.png}
- \caption[Figure 4]{gdbgui browser interface}\label{fig:gdbgui}
+ \caption[Gdbgui]{gdbgui browser interface}\label{fig:gdbgui}
  \end{figure}
 
 
@@ -2807,29 +3084,57 @@ header in general.
 Qemu is a fairly flexible emulator, and a future improvement could focus on 
 enriching the virtual environment with more device options.
 
+There is another consideration which has been ignored for the purposes of this
+work: Qemu exists to virtualize generic machines for any architecture. The 
+Raspberry Pi is a premium choice when the objective is learning, 
+but an entirely new and ad-hoc virtual machine could be created and run on the
+emulator just like $\mu$MPS2 does, only with the advantage of a widespread and
+general purpose tool as backend. One could implement printers, terminals, disks,
+tapes and even network interfaces not just as peripherals emulated by the abstraction
+layer (which is somewhat redundant in a virtualized machine) but by the Qemu
+emulator itself. \\
+Moving away from ad-hoc tools in favor of Qemu is still an improvement
+in the author's perspective, even though this obviously drops the advantage 
+of running on real hardware as well.
+However, on a more ambitious and visionary note, would it really? FPGA technology
+has become more and more affordable in recent years, and with a stretch of imagination
+the near future could harbor a FPGA board popularized like the Raspberry Pi and
+capable of being programmed as a RISC V core. In this scenario the acts of 
+building a new virtual Qemu machine and a real FPGA-hosted SoC would overlap,
+allowing for a completely controlled real \textbf{and} virtual learning environment.\\
+This is an arguably possible but very wild speculation.
+
+
 \section{Debugging with GDB}
 Being a off-the-shelf software GDB is flexible enough to be extended with 
 a specifically tailored client. GDB provides a machine interpreter that recognizes
 machine readable commands for the purpose of creating higher level interfaces.
 
-If the generic approach of gdbgui was deemed too complex for inexperienced graduate
+If the generic approach of Gdbgui was deemed too complex for inexperienced graduate
 students one could implement a $\mu$MPS2-like debugging interface that connects
-to the Qemu GDB server. Using the same interface but on a different note a
-debugging environment could be created inside a commonly used IDE, like Atom or 
-Visual Studio Code.
+to the Qemu GDB server. 
+Following a more common approach for debuggers, a GDB compliant
+ environment could be created inside a widely spread, extensible IDE like Atom or 
+Visual Studio Code.\\
+Indeed, by using generic GDB interface extensions it is already possible to debug
+Qemu from VS Code. To improve on this it would suffice to add debugging widgets
+with specific register and device views.
 
 \section{Other ARM64 SoC}
 Although it is now firmly seated in the Olympus of open source educational boards,
 the Raspberry Pi family is build on awfully obscured and undocumented hardware.
 Broadcom follows the market trend of not releasing any information on its 
-products like other manufacturers.
-There are many Raspberry Pi-like boards that base themselves on similar hardware:
-namely, a potent ARM CPU assisted by a graphical processing unit. In principle,
+products like other manufacturers.\\
+
+There are many Raspberry Pi-like boards that base themselves on similar hardware
+(namely, a powerful ARM CPU assisted by a graphical processing unit). In principle,
 the work that has been done for the British board could be easily ported to a 
-wide number of similar devices. The Pine64 family, for example, has recently
-marketed a laptop powered by one of their compute modules. Running a toy
-OS on a real laptop could be both a more academically interesting exploit and
- an higher highlight for an undergraduate (or even graduate) student.
+wide number of similar devices. For example Pine64, an open source family of products
+taking heavy inspiration from the Raspberry Pi inheritance, has recently
+marketed a laptop powered by one of their compute modules and is planning on 
+a smartphone and tablet with the same characteristics. Running a toy
+OS on a real-world mobile device could be both a more academically interesting 
+exploit and an higher highlight for an undergraduate (or even graduate) student.
 
 \section{Other Programming Languages}
 Traditionally, Operating System kernels are written in C with critical parts
@@ -2837,14 +3142,16 @@ coded in Assembler. Some alternate higher level components using C-derived
 languages like C++ (Windows and Android) and Objective-C (IOS).
 In the introduction some notable exceptions were mentioned: the Ultibo project 
 \cite{ultibo} is a Raspberry Pi hardware abstraction layer written entirely in 
-Pascal; when performance and resources are limited, one can find kernel written
+Pascal; Circle64 \cite{circle} is a similar library where C++ is used instead;
+ when performance and resources are limited, one can find kernels written
 entirely in Assembler (like KolibriOS).
 
 Different programming languages obviously bring advantages and disadvantages,
 but in the scope of educational work the choice falls unambigously on pure C.
 It is the standard in Operating System development, and for good reasons:
-simplicity, ease of carrying on low level memory operations, huge community and
-learning reference, perfect balance between abstraction and hardware fidelity.
+simplicity, ease of carrying on low level memory operations, low portability 
+dependencies, huge community and learning reference, perfect balance 
+between abstraction and hardware fidelity.
 
 Even beyond an academic objective, C is by far the dominant choice when it 
 comes to kernel development and has been for decades. There is, however, a
@@ -2856,19 +3163,21 @@ already possible (and fairly easy) to run Rust code in various bare metal ARM
 environment, Raspberry Pi included.
 
 The main drawback lies in its inherent complexity: concepts like ownership and 
-parallelism take a great deal of effort befor mastering, and that would contrast
+parallelism take a great deal of effort before mastery, and that would contrast
 with the focus on OS development of this work. Nevertheless, Rust is considered
-to be the closest second to C when it comes to the choice of programming language.
+to be the closest second to C when it comes to the choice of programming language
+and if it was included as additional topic of study in future Computer Science
+courses the opportunity should be considered seriously .
 
 \section{Emulation Layer on Videocore IV}
 Through the mailbox interface it is possible to ask the Broadcom GPU to directly
-execute code; this is what happens with graphical firmware routines in fully
-fledged Operating Systems like Raspbian.
-Initially code for the GPU was released only in binary form as proprietary 
+execute code: this is what happens with graphical firmware routines in fully
+fledged Operating Systems like Raspbian.\\
+In the early years code for the GPU was released only in binary form as proprietary 
 software; only in 2012 Broadcom gave in and documented open source firmware for 
 graphical processing. To this day a small component of proprietary binaries is 
 still necessary to boot the Raspberry Pi (for example, {\tt bootcode.bin}), although
-there are timid attempts at reverse engineering that as well.
+there are timid attempts at reverse engineering that as well.\\
 
 If the Videocore IV was freely available for the developer like the ARM CPU, part
 (if not the entirety) of the abstraction layer that is implemented as 
@@ -2879,19 +3188,23 @@ a more detailed emulation of hardware devices, for examble by acting as a real
 DMA peripheral when reading and writing to emulated disks and tapes.
 Students could write completely from scratch their Operating System, relying on 
 GPU firmware to assist them in more complex tasks like device communication and
-boot process.
+boot process.\\
+It should be noted that this approach would probably break Qemu emulation, 
+because the general purpose tool virtualizes the architecture, not the hardware.
+There is no Videocore in the {\tt raspi3} machine: the kernel image is loading 
+by Qemu and it is unclear to what degree mailboxes to the GPU respond correctly.
 
 \section{Course Organization}
 <name> was developed to be of assistance for students. The focus is on an Operating
 Systems course, so effort was put into shaving off low level hardware interfacing
-and initialization: the objective is to learn how an OS works, not AArch64 Assembler
-instruction set and registers, or how to operate the Arasan EMMC controller.
+and initialization: the objective is to learn how an OS works, not the AArch64 Assembler
+instruction set and registers, or how to operate the Arasan EMMC controller.\\
 This approach however could be radically different depending on the subject under 
 scrutiny. Low level Assembler programming and the ARM64 architecture are interesting
-topics for a course in System Architectures. With enough time, will and coordination,
+topics for a course in System Architectures. Given enough time, will and coordination,
 the Kaya OS project could be build bottom-up by students in its entirety over four
-semester and two different courses: System Architectures for initialization and
-peripheral interfacing, and Operating Systems for the kernel and process management.
+semesters and two different courses: System Architectures for initialization and
+peripheral interfacing and Operating Systems for the kernel and process management.
 
 In that scenario, <name> is not a support for students anymore, but a mere example
 and study on how to develop such an abstraction layer. Some sections would probably
@@ -2921,6 +3234,7 @@ Overall, it would certainly be an extremely formative experience.
                     JaeOS per la Didattica dei Sistemi Operativi\",
                     Alma Mater Studiorum, 2016.
 \bibitem{pop} M. Goldweber, R. Davoli, $\mu$MPS Principles of Operation, Lulu Books, 2011
+\bibitem{raspberrypios} Raspberry Pi OS, \url{https://github.com/s-matyukevich/raspberry-pi-os}
 \bibitem{ultibo} The Ultibo Project, \url{https://ultibo.org/}
 \bibitem{circle} The Circle C++ environment, \url{https://github.com/rsta2/circle}
 \bibitem{bcm2835} BCM2835 ARM Peripherals, Broadcom.
@@ -2928,6 +3242,7 @@ Overall, it would certainly be an extremely formative experience.
 \bibitem{pl011} PrimeCell UART (PL011) Technical Reference Manual, ARM.
 \bibitem{guide} ARM Cortex-A Series Programmer's Guide for ARMv8-A, ARM, 2015.
 \bibitem{armarm} ARM Architectural Reference Manual ARMv8, for ARMv8-A Architecture Profile, ARM, 2017.
+\bibitem{a53} ARM Cortex-A53 MPCore Processor, ARM, 2016.
 \end{thebibliography}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%non numera l'ultima pagina sinistra
 \clearpage{\pagestyle{empty}\cleardoublepage}
