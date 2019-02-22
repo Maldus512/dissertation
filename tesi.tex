@@ -328,7 +328,6 @@ Some of the few, closest available projects are:
         management and initialization. Though not specifically created for 
         OS development it might have been a useful reference if it was not
         written entirely in Free Pascal.
-        %TODO: study UltiBo some more
     \item \textbf{Circle}: Similar to Ultibo, but with a less professional approach
         and written in C++ \cite{circle}. In the same way it might be considered an already
         existing version of the presented work: however the initial approach 
@@ -468,6 +467,7 @@ a better option.
 \newpage
 
 \section{Raspberry Pi 3 (ARM64)}
+\label{raspberry3}
 The final choice was the Raspberry Pi 3 (any model, in theory). Although it shares
 some of the shortcomings of previously considered alternatives like lack of 
 peripherals and a difficult development cycle, it offered a significant advantage:
@@ -491,8 +491,8 @@ System Timer can be replaced by the internal ARM Timer.
 USB and Network Interfaces are missing from this project.
 
 Lastly, with Raspberry Pi 3 came also the change to the architecture, from 32 
-to 64 bits. The Cortex A-53 running on the board follows the ARMv8 specification,
-which adds 64 bit support while still keeping backward compatibility for 32 bit
+to 64-bits. The Cortex A-53 running on the board follows the ARMv8 specification,
+which adds 64-bits support while still keeping backward compatibility for 32 bit
 applications. In theory, the student developed kernel could still use a 32-bit
 architecture; however, after studying thorughly the new AArch64 it was decided
 to switch to it.
@@ -824,8 +824,6 @@ asynchronous exceptions.
  \includegraphics[scale=0.525]{images/tesi10.png} 
  \caption[Exceptions]{Tree of exception classes.}\label{fig:exceptions}
  \end{figure}
-
-%TODO: add a diagram
 
 \subsection{Aborts}
 Abort exceptions, also called system errors (SError), occur every time some abnormal
@@ -2488,8 +2486,9 @@ corresponding interrupt line will be asserted following command completion.
 For this purpose a phony ``0 microseconds'' \textbf{physical} timer is scheduled to 
 ensure that the line is serviced as soon as the FIQ terminates.
 
-Interestingly, the implementation of this module is heavily inspired by the 
-solution to phase 1 of the KayaOS project, covering process and semaphore queues.
+Interestingly, the implementation of this module is heavily inspired by the list
+managing routines found in a past solution to phase 1 of the KayaOS project, 
+covering process and semaphore queues.
 
 \section{Hardware Library}
 Modules under the {\tt source/hal/} subdirectory contain functions to conveniently access 
@@ -2511,6 +2510,7 @@ Partitions of any size permitted by FAT32 are accepted: the file allocation tabl
 is only partially loaded in main memory as a cache of cluster pointers.
 
 \section{Memory Management Unit}
+\label{halmmu}
 Using the MMU can be considered a higher level of complexity in its own right.
 One of the improvements brought by $\mu$MPS2 over $\mu$MPS was the possibility 
 of having it disabled for the first phases of the project, since the real 
@@ -2578,6 +2578,98 @@ functions. This nuisance can be handled automatically by the abstraction layer
 to change the handler's address after enabling the MMU.
 
 Those choices are subjective and could be easily changed.
+
+\section{Exception Levels and Virtualization}
+The ARMv8 specifications counts a great deal of features for virtualization
+purposes. One of the four exception levels, \textbf{EL2}, is defined as the
+hypervisor level and has responsibilities revolving around multiple guest OS management,
+abstraction of system registers, nested virtualization of page tables (virtualized
+virtual memory, so to speak) and device emulation. Some functions at \textbf{EL3} 
+are connected to those concepts, but it is a level mainly focused on TrustZone 
+technology and security. \\
+Many of the ideas enumerated in this description are at the base of this project,
+so one would naturally expect said features to be exploited to some extent.
+Although the possibility is not ruled out by the author, up until the time of 
+writing the route of \textbf{EL2} has been deemed unattractive for the development
+of MaldOS.
+
+After a thorough analysis, this should not come as a surprise. The hypervisor 
+component that ARM refers to is for a complete Operating System to be taken advantage
+of in the context of multiple virtual guest OS hosting; while intuitively an 
+abstraction layer emulating multiple device classes and a simpler develoment 
+environment has many common points, it is also significantly different. Therefore,
+many configuration options offered by the hypervisor that could improvements to this
+work ultimately fail to fit into it. The following sections portray the most 
+notable ones.
+
+\subsubsection{Trap General Exceptions}
+\textbf{EL2} configuration is controlled by the \textbf{HCR\_EL2}, a 64-bits 
+long register with many choices in the matter of virtualization. The number
+of available fields actually vary depending on the implemeted version of the
+specification: the last ARMv8.3 uses 44 bits, but the Cortex A-53 processor was
+created when version 8.0 was being defined, thus having only 33 usable bits.
+Out of those fields the most prominent one is \textbf{TGE}, short for Trap General
+Exceptions. When the \textbf{TGE} bit is set all exceptions that would normally
+be executed at \textbf{EL1} are routed to \textbf{EL2} instead.\\
+This option has the potential to greatly simplify the actuation of an abstraction
+layer. Executing at the same level of the assisted code weakens it, forcing some
+tradeoffs with emulation fidelity; for example, having two separate exception
+levels could mean that the abstraction layer never needs to worry about virtual
+memory as MMU settings are banked between levels, thus avoiding the register 
+juggling uncovered in section \ref{halmmu}.
+Unfortunately this result is not achievable, as an active \textbf{TGE} apparently
+ means \textbf{EL1} is not accessible altogether. {\tt eret} instructions that
+ would lower the exception level to 1 are treated as illegal exception returns 
+ and maintain \textbf{EL2} privilege instead (carrying on execution from where
+ the return should have started). If the abstraction layer is unable to 
+ return to \textbf{EL1} when leaving the user code in control there is no point
+ in working at \textbf{EL2} in the first place.\\
+ Considering this behaviour it is unclear what purpose the \textbf{TGE} bit
+ is supposed to serve, especially since another field (\textbf{E2H}) seems to 
+ lead to the exact same scenario where the host Operating System lives in \textbf{EL2}
+ instead of \textbf{EL1} \footnote{It should be noted that the \textbf{E2H} is 
+ only available from version 8.1 of the specification.}.
+
+\subsubsection{AArch32}
+Section \ref{raspberry3} hints at the 32-bits compatibility interface of ARMv8, 
+an essential property of all 64-bits architectures to allow execution of older
+software. The \textbf{RW} bit of the \textbf{HCR\_EL2} register controls the
+execution state of lower exception levels. In the scope of an educational project
+the 32-bits architecture could be seen as more historically interesting and
+appropriate as a first approach to the field; for this work however more value
+was given to clean structure and modern perspective, and AArch64 was chosen.
+
+\subsubsection{Trap System Registers Accesses}
+Among the different variations that \textbf{HCR\_EL2} allows for there is the 
+option to trap several memory accesses, both read and write, or certain instructions
+(like TLB maintainance) to \textbf{EL2} with the intent of hijacking the result.
+This possibility was not found to be useful in the context of this work.
+
+\subsubsection{Partial Exception Routing and Virtual Exceptions}
+In opposition to the \textbf{TGE} complete superseding of \textbf{EL1} by
+\textbf{EL2} there are also separate fields in \textbf{HCR\_EL2} that allow
+for single exception classes to be routed to a different level (\textbf{AMO}, 
+\textbf{IMO}, \textbf{FMO} fields, corresponding to serrors, interrupts and
+fast interrupts respectively).\\
+Those fields share some of the advantages listed about general exceptions routing
+while still retaining the possibility to return at \textbf{EL1}.
+Moreover, when the corresponding routing bit is enabled another field permits the
+hypervisor to set a virtual exception that lower levels will see pending and that
+could be used to more properly emulate $\mu$MPS2 devices.\\
+
+This situation is not perfect either. First, not all interrupt classes are subject
+to this configuration, leaving out synchronous exceptions caused by instructions
+like {\tt SVC}, used by system calls. While it is still possible to implement
+the {\tt SYSCALL()} function as an {\tt HVC} call, the difference in exception
+management is somewhat disorienting.
+As for virtual interrupts, they still have to be taken and handled directly by 
+\textbf{EL1}. If used the abstraction layer would find itself in an 
+uncomfortable position with overhead handlers for both \textbf{EL1} and \textbf{EL2}
+instead of routing everything to \textbf{EL2} and then gracefully returning to 
+\textbf{EL1} for user-defined routines, adding the complexity of the hypervisor
+without solving completely \textbf{EL1} related problems (i.e. MMU register 
+switching).
+
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Student's Perspective}
@@ -2830,6 +2922,7 @@ a proper cross compile toolchain for ARM64 (or an ARM64 device, like the Raspber
 Pi itself) and eventually Qemu.
 
 \section{Compiling}
+\label{compiling}
 <name> provides a single {\tt .elf} file containing initialization code, abstraction
 layer and some functions; given that, there are several ways to compile it 
 into a project. Here an example is shown, where a single module contaning the {\tt main}
@@ -2970,12 +3063,8 @@ kernel was still hitting the correct TLB cached entries.
 The final solution was to run the kernel code at address {\tt 0xFFFF000000000000}
 to make sure \textbf{TTBR1} was always selected.\\
 
-%TODO: image
-
-
 Qemu requires a kernel image and a microSD card image to be passed as command
 line arguments. An example command to run the emulator is:
-%TODO: specify how to create an image
 \begin{lstlisting}
 qemu-system-aarch64 -M raspi3 -kernel kernel8.img \
     -drive file=drive.dd,if=sd,format=raw \
@@ -2996,6 +3085,91 @@ Where the command line options have the following meaning:
         conveniently pipe the serial output of the chosen interface on the shell
         (obviously available for only one of the two UARTs).
 \end{description}
+
+\subsection{Create a Disk Image}
+As is indicated in previous command examples Qemu accepts a block device to be 
+plugged into the {\tt raspi3} machine as if by the microSD card slot.
+The specified path can either be real, as in a physical disk installed in the 
+host system, or fake, in the form of a binary file representing an abstracted 
+file system.\\
+In the first scenario it is sufficent to pass the device file path through the
+{\tt file} argument of the {\tt -device} command line option: for all intents and purposes
+the emulated machine will communicate with the drive using an EMMC controller.
+Unless specific rules are present into {\tt /etc/fstab} that allow normal users 
+to access disk drives, root permissions will be necessary for this route; as always, special
+care should be taken lest risking corruption of a vital drive due to a bug in the emulated OS.
+For this and other convenience reasons, using a virtual disk file is usually preferable. A 
+virtual disk file can be created by various means; here is brought an example 
+using the Gparted tool.
+
+The file itself must be already present in the file system before running Gparted. 
+A conventient way to create it is using the {\tt dd} utility.
+
+\begin{lstlisting}[language=sh]
+$ dd if=/dev/zero of=drive.dd bs=1M count=50
+\end{lstlisting}
+
+The following procedure is slightly complicated by the fact that the final result
+is not a simple FAT32 partition encoded in an image file, but an entire disk complete
+with partition table. A suitable way to handle such a requirement consists in pointing
+Gparted to a loopback device mapped to the file; this is achieved with the command:
+
+\begin{lstlisting}[language=sh]
+$ sudo losetup -fP drive.dd
+$ losetup -j drive.dd
+\end{lstlisting}
+
+The second of the two commands prints the loopback device that was mapped to 
+{\tt drive.dd}.
+After this, the disk configuration can be accessed in Gparted by running 
+{\tt sudo gparted /dev/loop0} (provided that {\tt loop0} was the mapped block
+device).
+The first step is to create a new partition table via \textit{Device $>$ Create
+Partition Table}; the table type {\tt msdos} should be selected and written to the
+file, as in figure \ref{fig:gparted1}.
+
+ \begin{figure}[t]
+    \begin{center}
+ \includegraphics[scale=0.3]{images/tesi18.png}
+ \caption[Gparted Partition Table]{ How to create a new partition table in Gparted.}
+ \label{fig:gparted1}
+    \end{center}
+ \end{figure}
+
+ \begin{figure}[h]
+    \begin{center}
+ \includegraphics[scale=0.3]{images/tesi19.png}
+ \caption[Gparted FAT32 Partition]{ How to create a new FAT32 partition in Gparted.}
+ \label{fig:gparted2}
+    \end{center}
+ \end{figure}
+
+
+Then the actual partitions can be written. Despite the microSD emulation, Qemu
+does not follow the same boot process as a real Raspberry Pi 3; therefore, the 
+disposition of partitions on disk and the presence of an actual {\tt kernel8.img}
+binary on the first FAT32 partition is irrelevant. Nonetheless, MaldOS mimics the hardware 
+restrictions and expects a single FAT32 partition. The following configuration
+step is depicted in figure \ref{fig:gparted2}.
+
+Once everything is set the image file can be mounted and accessed again
+through a loopback device. Note that, let {\tt /dev/loop0} be the associated 
+loopback device, the actual partition to be mounted is different, probably in 
+the form {\tt /dev/loop0p1}. All files copied into the image will be available 
+for the emulated machine; tape and disk devices are added to MaldOS this way,
+as files name {\tt TAPEn} and {\tt DISKn} (with \textit{n} ranging from 0 to 3),
+respectively.\\
+
+Another, perhaps faster method for achieving a suitable disk image consists in 
+simply cloning a real disk (possibly a Raspberry Pi-ready microSD card) to a
+binary file with the {\tt dd} tool, similarly to how the initial {\tt drive.dd}
+was created:
+
+\begin{lstlisting}[language=sh]
+$ dd if=/dev/mmcblk0 of=drive.dd bs=1M
+\end{lstlisting}
+
+Where {\tt /dev/mmcblk0} is the disk device to be cloned.
 
 \section{Debugging}
 The debug of the compiled kernel can be carried over Qemu with GDB. Using the
@@ -3099,7 +3273,7 @@ of running on real hardware as well.
 However, on a more ambitious and visionary note, would it really? FPGA technology
 has become more and more affordable in recent years, and with a stretch of imagination
 the near future could harbor a FPGA board popularized like the Raspberry Pi and
-capable of being programmed as a RISC V core. In this scenario the acts of 
+capable of being programmed as an ARMv8 (or other, like RISC V) core. In this scenario the acts of 
 building a new virtual Qemu machine and a real FPGA-hosted SoC would overlap,
 allowing for a completely controlled real \textbf{and} virtual learning environment.\\
 This is an arguably possible but very wild speculation.
