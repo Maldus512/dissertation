@@ -109,7 +109,7 @@ understanding of its principles is paramount in the formation of a proper comput
 scientist.
 The theory behind Operating Systems is not a particularly complex topic. Ideas 
 like process scheduling, execution levels and resource semaphores are intuitively
-grasped by students; yet mastering these notions thorugh abstract study alone
+grasped by students; yet mastering these notions through abstract study alone
 will prove tedious if not impossible.\\
 Devising a practical - albeit simplified - implementation of said notions can
 go a long way in helping students to really understand the underlying workflow
@@ -118,13 +118,13 @@ of the processor as a whole in all its nuances.
 Developing a proof-of-concept OS, however, is not as simple as creating software for
 an already existing one. The complexity of real-world hardware
  goes way beyond what students are required to learn, which makes hard to
- find a proper machine architecture to run the project on.
+ even find a proper machine architecture to run the project on.
 
 This work is heavily inspired by $\mu$MPS2 (and $\mu$ARM), a previous solution to this problem:
  an emulator for the MPIS R3000 processor. By working on a virtual and simplified
  version of the hardware many of the unnecessary tangles are stripped away while
  still mantaining the core concepts of OS development.
-Although inspired by a real architecture (MIPS), $mu$MPS2 is still an abstract 
+Although inspired by a real architecture (MIPS), $\mu$MPS2 is still an abstract 
 environment; this allows the students' work to be controlled and directed,
  but might leave some of them with a feeling of detachment from reality
  (as was the case for the author).
@@ -183,7 +183,7 @@ have already been covered by previous works like $\mu$ARM and $\mu$MPS2
 To quickly recap the most notable mentions:
 \begin{description}
     \item[Study of an existing OS:] the most theoretical approach, it involves
-        reading and analyzing the source code. There is no short supply of such
+        reading and analyzing the source code of an existing Operating System. There is no short supply of such
         examples; historically Minix is cited \cite{minix}, but a quick research
         will reveal countless small kernels for embedded platforms and emulators.\\
         The biggest downside of this approach is that the esamination of the source
@@ -220,7 +220,7 @@ Developing a real world application with value outside of the academic context
  
 In the frame of this work said hindrances would be the complexities tied to
 hardware architecture of peripherals and CPU that, although interesting
-int their own right, are unnecessary for the students' formation process.
+in their own right, are unnecessary for the students' formation process.
 The $\mu$MPS emulator provides an environment fairly similar to real hardware
 while still being approchable for an undergraduate student; it positions itself
 in a sweet spot between abstraction and concreteness, allowing just enough
@@ -255,8 +255,8 @@ passes. Two of its main features were being a 64-bits architecture and a faily s
 one on top of that; the coming of ARMv8 superseded both aspects. Although it made
 history with successful devices like the original Playstation and Nintendo64 consoles,
 in the last decade MIPSEL processors found few practical applications (with the notable 
-exception of the computer vision chip on the Tesla Model S).
-This considerations were valid when $\mu$ARM vas conceived and obviously still stand.\\
+exception of the computer vision chip found on the Tesla Model S).
+Those considerations were valid when $\mu$ARM vas conceived and obviously still stand.\\
 
 Moreover, the ARMv8 architecture choice fixes most of the problems that 
 previously arose while
@@ -270,7 +270,7 @@ considering real hardware as an environment:
             student will know what a Raspberry Pi is at least by the end of his or her
             course of study.
     \item \textbf{Simplicity}: it will be argued over the dissertation that the
-            64-bit ARMv8 architecture is fairly simple compared to its predecessors,
+            64-bits ARMv8 architecture is fairly simple compared to its predecessors,
             thus making it suitable even for a software-focused study.
     \item \textbf{Future prospect}: More and more devices are running on ARM.
             The smartphone market is almost entirely dominated by the family of
@@ -492,8 +492,8 @@ USB and Network Interfaces are missing from this project.
 
 Lastly, with Raspberry Pi 3 came also the change to the architecture, from 32 
 to 64-bits. The Cortex A-53 running on the board follows the ARMv8 specification,
-which adds 64-bits support while still keeping backward compatibility for 32 bit
-applications. In theory, the student developed kernel could still use a 32-bit
+which adds 64-bits support while still keeping backward compatibility for 32-bits
+applications. In theory, the student developed kernel could still use a 32-bits
 architecture; however, after studying thorughly the new AArch64 it was decided
 to switch to it.
 The main reasons for this decision are two: first, the Kaya OS project (and
@@ -570,7 +570,7 @@ through {\tt eret} instructions.
 
 Exceptions are normally taken to \textbf{EL1} but can be set to run in \textbf{EL2}
 or even \textbf{EL3} by configuring corresponding system registers \textbf{HCR\_EL2}
-and \textbf{SCR\_EL3}, called Hypervisor Configuration Register and Secure Configuration
+and \textbf{SCR\_EL3}, called \textit{Hypervisor Configuration Register} and \textit{Secure Configuration}
 Register respectively. 
 
 It is also possible to change execution \textit{state} (i.e. AArch64 or AArch32)
@@ -705,7 +705,7 @@ of the various bit fields refer to the ARM reference manual \cite{armarm}.
 
 \subsection{PSTATE}
 A reader with experience in ARM architecture will surely notice the lack of a
-current program status register, holding informations like the current exception
+current program status register holding informations like the current exception
 level, aritmetic flags, interrupt mask and so on.
 The AArch64 version of said register is implicitly present and not directly 
 accessible. Instead, the single fields are supplied to read and
@@ -743,7 +743,7 @@ no such register can be loaded from or stored to even with Assembler instruction
 \label{exceptions}
 In ARM architecture exceptions are conditions or system events that require some 
 action by privileged software to ensure smooth 
-functioning of the system; said condition is taken care of immediatly by interrupting
+functioning of the system; said condition is taken care of immediately by interrupting
 the normal flow of software execution and starting another routine (the exception
 handler).
 There are several classes of exceptions; every class can branch in different kinds,
@@ -759,7 +759,7 @@ the table for \textbf{EL1} is referenced.
 The exception table can be anywhere in memory but must be 128 bytes aligned and 
 must have the format specified in table \ref{etable}.
 Each entry in the table is 16 instructions long, allowing for some control logic 
-to be present in the top level handler as well, before branching to a more complex
+to be present in the top level handler as well before branching to a more complex
 routine.
 The table can be divided in four sections:
 \begin{enumerate}
@@ -845,14 +845,14 @@ situations.
 
 \subsection{Reset}
 Reset is a special exception, fired on power up of the processor. Its handler is 
-implementation-specific and presumably located at address {\tt 0x80000} in the 
-case of the BCM2837.
+implementation-specific and presumably located at address {\tt 0x80000}, the starting
+point for the loaded kernel, in the case of BCM2837.
 
 \subsection{Exception Generating Instructions}
 We have seen that a core can lower its exception level with {\tt eret}, but can
 only increase it through an exception. For this purpose there are Assembler instructions
 that induce an exception to a higher execution level, usually to require a service 
-paired with an higher privilege. The most obvious example of this behaviour are
+paired with a higher privilege. The most obvious example of this behaviour are
 system calls.
 \begin{itemize}
     \item \textbf{SVC:} the \textit{supervisor call} instruction fires an exception
@@ -860,13 +860,13 @@ system calls.
     \item \textbf{HVC:} the \textit{hypervisor call} instruction fires an exception
         handled at \textbf{EL2}. Used by the guest OS to require hypervisor services.
     \item \textbf{SMC:} the \textit{secure monitor call} instruction fires an exception
-        handled at \textbf{EL3}. Allows to require \textit{secure world} context
+        handled at \textbf{EL3}. Used to require \textit{secure world} context
         switch.
 \end{itemize}
 Since those exceptions follow an instruction execution they are by definition
 synchronous.
 
-\subsection{Caches}
+\section{Caches}
 \label{cache}
 A cache is a block of memory with faster access than the memory normally used.
 Whenever the RAM is read the resulting value can be stored in this intermediate,
@@ -1190,7 +1190,7 @@ fields:
         set the access flag to 1 and attempt again the memory access.
     \item \textbf{[11]} is the not global bit (\textit{nG}). If a lookup using this 
         descriptor is cached in a TLB, determines whether the TLB
-        entry applies to all ASID values, or only to the current ASID value
+        entry applies to all ASID values or only to the current ASID value
         (see section \ref{tlb} for more).
     \item \textbf{[12:47]} is the address to the memory block that is pointed by
         the descriptor. It is aligned similarly to the address in a table descriptor,
@@ -1203,9 +1203,9 @@ fields:
     \item \textbf{[52]} is the Contigous bit, a hint bit indicating that the 
         translation table entry is one of a contiguous set or entries and may be
         be cached in a single TLB entry.
-    \item \textbf{[53]} PXN bit: privileged execute never bit. If set, the memory block's 
+    \item \textbf{[53]} PXN bit: \textit{privileged execute never} bit. If set, the memory block's 
         execution at unprivileged exception levels (\textbf{EL0}) is forbidden.
-    \item \textbf{[54]} XN bit: execute never bit. If set, the memory block's 
+    \item \textbf{[54]} XN bit: \textit{execute never} bit. If set, the memory block's 
         execution is forbidden.
     \item \textbf{[55:63]} are ignored/reserved bits.
 \end{itemize}
@@ -1375,7 +1375,7 @@ the one assigned to ``normal'' operation, \textbf{TTBR0\_EL1}, and the register
  range the addresses in its code must be set properly. This would require either
  a linker script instructing to compile for memory starting at 
  {\tt 0xFFFF00000000000000} (in which case the MMU must be configured and 
- enabled immediatly) or compiling the code for relative branch instructions only.
+ enabled immediately) or compiling the code for relative branch instructions only.
  The latter approach is considered easier as it works even if the MMU is disabled
  and only requires the kernel entry point (the exception table) to be tweaked 
  when address translation is eventually turned on.\\
@@ -2344,7 +2344,7 @@ holds the next delay for every core and is restored when no more virtual
 lines are pending.
 
  Once the time slice is over the internal interrupt handler is called. 
- It checks for real or emulated pending interrupt lines and immediatly
+ It checks for real or emulated pending interrupt lines and immediately
  passes control to the user defined interrupt handler.
 
  \begin{figure}[h]
@@ -2403,8 +2403,8 @@ a file, last block of the tape or neither of those).
 The disk on the other hand has blocks organized with a three dimensional indexing
 that reproduces a head-cylinder-sector disposition.
 
-When a command is issued to the disk or tape device a FIQ for the first core is immediatly
-fired. Depending on the command it might be evaded immediatly or set a timer for
+When a command is issued to the disk or tape device a FIQ for the first core is immediately
+fired. Depending on the command it might be evaded immediately or set a timer for
 later to emulate hardware delay; commands such as \textbf{RESET} and \textbf{ACK}
 finish on the spot, while operations like moving the device and reading/writing
  a block are postponed for a few milliseconds.\\
@@ -2828,7 +2828,7 @@ by the ARMv8 specification. The only exception is the first mailbox of the first
 core, reserved for emulated peripheral management. Data written to this mailbox
 is interpreted as a pointer to a device registers-holding structure and is not
 controlled by the student provided kernel.
-Other mailboxes on the other hand will immediatly cause an interrupt in the
+Other mailboxes on the other hand will immediately cause an interrupt in the
 corresponding core. Mailbox interrupts must be cleared by writing the same data
 in the write-clear register.
 
