@@ -740,6 +740,7 @@ no such register can be loaded from or stored to even with Assembler instruction
     \end{table}
 
 \section{Exception Handling}
+\label{exceptions}
 In ARM architecture exceptions are conditions or system events that require some 
 action by privileged software to ensure smooth 
 functioning of the system; said condition is taken care of immediatly by interrupting
@@ -1081,8 +1082,8 @@ figure \ref{fig:translation2}.
 When in AArch64 there is a single accepted format for table entries. We will now
 consider the configuration consequential to a 4 KiB granule size; other choices
 differ sligtly in translation indexes width and position, but maintain the same
-core concepts. The table descriptor is 64-bits wide, separated in fields listed 
-in figure \ref{fig:descriptor}.
+core concepts. The table descriptor is 64-bits wide, separated in differently sized
+ fields.
 
 Any table entry is one of two types:
 \begin{enumerate}
@@ -1126,14 +1127,13 @@ following meaning:
         [11\footnote{see footnote \ref{4knote}}:0] bits assumed
         as 0. Because of this all page tables must be 4096 ($2^{12}$) bytes aligned.
     \item \textbf{[48:58]} are ignored/reserved bits.
-    %TODO: Metti il corsivo
-    \item \textbf{[59]} PXNTable field: \textit{private execute never bit} for subsequent
+    \item \textbf{[59]} PXNTable field: \textit{private execute never} bit for subsequent
         levels of lookup; if set the memory range covered by this and following entries
         cannot be executed by code at level \textbf{EL0}.
-    \item \textbf{[60]} XNTable field: execute never bit for subsequent levels
+    \item \textbf{[60]} XNTable field: \textit{execute never} bit for subsequent levels
         of lookup; if set the memory range covered by this and following entries
         cannot be executed.
-    \item \textbf{[61:62]} APTable field: access permission bits for subsequent levels
+    \item \textbf{[61:62]} APTable field: \textit{access permission} bits for subsequent levels
         of lookup; this field enforces permission rules for the memory range
         indexed by this and following entries, combined in a hierarchical 
         fashion (see table \ref{tab:aptable}). Subsequent table entries can
