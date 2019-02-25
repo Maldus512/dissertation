@@ -58,11 +58,11 @@ Corso di Laurea Magistrale in Informatica }}
 \end{center}
 \vspace{15mm}
 \begin{center}
-{\LARGE{\bf TITOLO}}\\
+{\LARGE{\bf MaldOS:}}\\
 \vspace{3mm}
-{\LARGE{\bf DELLA}}\\
+{\LARGE{\bf a Moderately Abstracted Layer for}}\\
 \vspace{3mm}
-{\LARGE{\bf TESI}}\\
+{\LARGE{\bf Developing Operating Systems }}\\
 \end{center}
 \vspace{40mm}
 \par
@@ -334,7 +334,7 @@ Some of the few, closest available projects are:
         for the user was judged too complicated and it was only used as a reference.
     \item \textbf{Raspberry Pi OS}: An online step-by-step tutorial on OS development
         inspired by the Linux kernel \cite{raspberrypios}. In many ways it is very
-        similar to <name>, but has meaningful differences: it is incomplete and
+        similar to MaldOS, but has meaningful differences: it is incomplete and
         still ongoing, it does not contemplate an emulator and references mainly
         the Linux kernel, making it more complex to understand.
 \end{itemize}
@@ -1532,7 +1532,7 @@ proprietary licensing from Broadcom.
 
 \subsection{Configuration}
 It is possible to configure in different ways the boot process by combining
-different firmware binaries and {\tt config.txt} options, but <name> always uses
+different firmware binaries and {\tt config.txt} options, but MaldOS always uses
 the default with no extra steps needed; this is to ensure the usage is kept
 as simple as possible and because the base behaviour never presented any issue.
 Of all the available options, only the following two were ever considered 
@@ -1700,7 +1700,7 @@ functioning (registers and command codes) explained for each of them.
 Device peripherals are connected to the ARM CPU through memory mapped I/O (MMIO);
 their registers and buses are mapped in RAM starting from address {\tt 0x3F000000},
 as if the main memory of the system extended beyond 1GiB.
-Only the peripherals that find a purpose in <name> will be explored here.
+Only the peripherals that find a purpose in MaldOS will be explored here.
 
 \subsection{GPIO}
 The Raspberry Pi 3 board contains 54 General Purpose Input Output pins, out of which
@@ -2181,7 +2181,7 @@ The next chapter covers in greater detail the inner mechanisms of the emulated
 devices.
 
 \section{Printers}
-<name> supports up to four parallel printer interfaces able to transmit a 
+MaldOS supports up to four parallel printer interfaces able to transmit a 
 single byte of data at a time. Characters sent to a printer are displayed on 
 the HDMI connected display in the printer's section.
 The data structure expected by the abstraction layer is the same as every other
@@ -2196,7 +2196,7 @@ is busy will be ignored.\\
 The printer's interface maximum throughput is 125 KB/sec.
 
 \section{Disks}
-<name> supports up to four readable and writable disk devices. The disk current
+MaldOS supports up to four readable and writable disk devices. The disk current
 position is indexed by a combination of head, cilinder and sector to select
 4KiB blocks of persistent storage memory.
 Reading \textbf{DATA1} always returns the geometry of the installed disk: maximum
@@ -2473,7 +2473,7 @@ The second step of some device commands is scheduled for execution after a while
 since there is only one virtual timer at \textbf{EL1} to fire scheduled interrupts, this would
 eventually overwrite other pending timers. The physical timer is already allocated
 to schedule time slices, and two interrupts would not be enough anyway.
-To prevent this <name> uses a set of queue managing functions to 
+To prevent this MaldOS uses a set of queue managing functions to 
 schedule multiple virtual timers at once. 
 The ROM function {\tt setTIMER()} does not interact with the queue, but uses
 the physical timers instead.\\
@@ -2499,7 +2499,7 @@ the project, as the abstraction layer does not normally expose those functions
 They could however be seen as one of the many educational examples about 
 bare metal programming for the BCM2837 and ARM processors in general.
 
-Notably, since disk and tape devices are ``plugged'' into <name> as files onto
+Notably, since disk and tape devices are ``plugged'' into MaldOS as files onto
 the microSD, a small FAT32 file system library was necessary over the EMMC controller
 integration.
 The system expects a master boot record signaling a first FAT32 partition. There
@@ -2677,11 +2677,11 @@ all fail to fix this project's main flaws or make other problems emerge.
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Student's Perspective}
-This chapter describes what <name> exposes to a student to develop a toy OS:
+This chapter describes what MaldOS exposes to a student to develop a toy OS:
 provided ROM functions and mapped memory addresses that were decided and defined
 taking inspiration from Kaya and $\mu$MPS2.
 Barring some minor details, the illusion of touching an ARM system directly should
-be perfect for a novice. That being said, ``jailbreaking'' out of <name> is 
+be perfect for a novice. That being said, ``jailbreaking'' out of MaldOS is 
 fairly easy; the abstraction layer relies on a good willed user to be used at 
 most efficiency.\\
 As a first, general rule, direct interaction with system registers is
@@ -2698,7 +2698,7 @@ Those functions include:
     \item[PANIC()]: similar to \textbf{HALT()}, prints a kernel panic message before
         stopping.
     \item[WAIT()]: pauses execution until an interrupt occurs. Normally this is 
-        achieved by the {\tt wfi} Assembly instruction; under <name> however multiple
+        achieved by the {\tt wfi} Assembly instruction; under MaldOS however multiple
         interrupts (FIQ) are fired without the user knowing, so the single instruction
         would be unreliable. The \textbf{WAIT()} function works because it checks
         on a spinlock opened by the abstraction layer when a real interrupt is 
@@ -2804,7 +2804,7 @@ the state saved in the corresponding \textit{old area} must be loaded with a mod
 {\tt X0} register.\\
 
 Abort exceptions work similarly. Note however that unlike $\mu$MPS2, where TLB
-faults were part of the normal workflow, <name> does not contemplate recoverable
+faults were part of the normal workflow, MaldOS does not contemplate recoverable
 aborts. The abort handler is however generic, and the possibility is not ruled
 out.
 
@@ -2815,7 +2815,7 @@ sense to invoke one when at kernel level) the stack pointer is kept the same
 and grows from where it was left.
 
 \section{Multicore}
-<name> approach to multicore functionality is very simple. Exception handlers 
+MaldOS approach to multicore functionality is very simple. Exception handlers 
 are shared among all cores, leaving to the user the responsibility to separate
 routines based on the executing actor. Old areas where states are saved and stack
 pointers on the other hand are defined in a per-core basis. Every core can have
@@ -2833,7 +2833,7 @@ corresponding core. Mailbox interrupts must be cleared by writing the same data
 in the write-clear register.
 
 \section{Devices}
-The student can use two classes of devices on <name>: emulated or real peripherals.
+The student can use two classes of devices on MaldOS: emulated or real peripherals.
 
 \subsection{Real Peripherals}
 The only real peripherals accessible from the abstraction layer are the two 
@@ -2927,7 +2927,7 @@ Pi itself) and eventually Qemu.
 
 \section{Compiling}
 \label{compiling}
-<name> provides a single {\tt .elf} file containing initialization code, abstraction
+MaldOS provides a single {\tt .elf} file containing initialization code, abstraction
 layer and some functions; given that, there are several ways to compile it 
 into a project. Here an example is shown, where a single module contaning the {\tt main}
 function is linked to the HAL.
@@ -3373,7 +3373,7 @@ There is no Videocore in the {\tt raspi3} machine: the kernel image is loading
 by Qemu and it is unclear to what degree mailboxes to the GPU respond correctly.
 
 \section{Course Organization}
-<name> was developed to be of assistance for students. The focus is on an Operating
+MaldOS was developed to be of assistance for students. The focus is on an Operating
 Systems course, so effort was put into shaving off low level hardware interfacing
 and initialization: the objective is to learn how an OS works, not the AArch64 Assembler
 instruction set and registers, or how to operate the Arasan EMMC controller.\\
@@ -3384,7 +3384,7 @@ the Kaya OS project could be build bottom-up by students in its entirety over fo
 semesters and two different courses: System Architectures for initialization and
 peripheral interfacing and Operating Systems for the kernel and process management.
 
-In that scenario, <name> is not a support for students anymore, but a mere example
+In that scenario, MaldOS is not a support for students anymore, but a mere example
 and study on how to develop such an abstraction layer. Some sections would probably
 end up identical even when created by other developers (there are few alterations
 that can be made to the boot code, for example), but the interrupt handling in 
