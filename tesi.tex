@@ -90,9 +90,7 @@ Anno Accademico 2018-2019}}%inserire l'anno accademico a cui si � iscritti
 \large                                  %aumenta la grandezza del carattere
                                         %   a 14pt
 \em                                     %emfatizza (corsivo) il carattere
-Questa \`e la \textsc{Dedica}:\\
-ognuno pu\`o scrivere quello che vuole, \\
-anche nulla \ldots                      %\ldots lascia tre puntini
+Were it so easy
 \newpage                                %va in una pagina nuova
 
 
@@ -140,13 +138,54 @@ this knowledge an hardware abstraction layer has been developed for
 initialization and usage of various hardware peripherals, allowing users
 to buid a toy OS on top of it.
 While the final product can be used without knowing how it works internally 
-(in a similar fashion to the $\mu$MPS) emulator, all the code was written 
+(in a similar fashion to the $\mu$MPS2 emulator), all the code was written 
 trying to remain as simple and clear as possible to encourage a deeper study
 as example.
 
 \clearpage{\pagestyle{empty}\cleardoublepage}%non numera l'ultima pagina sinistra
 \chapter*{Sommario}
-TODO: traduzione dell'abstract
+L'insegnamento di sistemi operativi \`e forse una delle componenti cruciali di un
+corso di studi di informatica. Pur sapendo che solo una piccola percentuale di studenti
+affronter\`a la sfida di sviluppare software al di sotto del livello del sistema
+operativo, la comprensione dei suoi principi di funzionamento \`e essenziale nella
+formazione di un informatico. In s\'e, la teoria dietro ai sistemi operativi non 
+\`e particolarmente complessa. Concetti come scheduling, livelli di esecuzione e
+semafori di accesso alle risorse sono intuitivamente comprensibili per gli studenti;
+tuttavia appropriarsi pienamente di queste nozioni soltanto tramite lo studio 
+teorico \`e quasi impossibile. Al contrario, progettarne una implementazione
+pratica ma semplice pu\`o fare la differenza nell'assimilazione dei meccanismi
+di un processore, in tutti i loro dettagli.
+
+Sviluppare un sistema operativo come progetto accademico, tuttavia, \`e diversi
+ordini di grandezza pi\'u difficile rispetto alla creazione di software che si 
+avvalga di un ambiente di lavoro gi\'a esistente. La complessit\`a aggiunta 
+dell'hardware va spesso oltre a quello che ci si aspetta che gli studenti conoscano,
+il che rende difficile anche soltanto la ricerca di una architettura su cui
+eseguire suddetto progeto.
+
+Questo studio \`e fortemente ispirato da precedenti soluzioni a questo problema,
+nella forma di $\mu$MPS2 ( e $\mu$ARM), un emulatore per il processore MIPS R3000.
+Lavorando su una virtualizzazione semplificata dell'hardware gli studenti si possono
+concentrare sui concetti chiave dello sviluppo di un SO senza essere rallentati
+da dettagli meno significativi. Anche se ispirato a un'architettura reale (MIPS),
+$\mu$MPS2 rimane comunque un ambiente astratto; pur permettendo di controllare 
+e direzionare con precisione il lavoro, nel corso dello studio non si 
+pu\`o eliminare del tutto la sensazione di distacco dalla realt\`a (come \`e stato 
+per l'autore). In questo studio si sostiene che un progetto simile possa essere
+sviluppato su hardware reale senza che questo diventi troppo complicato. L'architettura
+scelta \`e ARMv8, pi\`u moderna e diffusa rispetto a MIPS, nella forma della 
+board educativa Raspberry Pi.
+
+Il risultato del lavoro \`e duplice: da una parte \`e stato portato avanti uno 
+studio dettagliato su come sviluppare un sistema operativo minimale sul Raspberry
+Pi 3, un processo che al momento non \`e adeguatamente documentato per chi non
+fosse gi\`a competente nel campo; forti di questa conoscenza \`e stato sviluppato un
+layer di astrazione per l'hardware che si occupa di inizializzare e semplificare
+l'approccio per alcune periferiche, permettendo agli utenti di costruirci sopra
+un sistema operativo giocattolo. Il prodotto finale pu\`o essere utilizzato senza
+sapere nulla sulla sua struttura interna (come l'emulatore $\mu$MPS2), il codice 
+interno \`e stato scritto con l'obbiettivo di essere il pi\'u semplice e chiaro
+possibile per non scoraggiare uno studio approfondito in qualit\`a di esempio.
 
 \renewcommand\labelitemi{\tiny$\bullet$}
 
@@ -1453,10 +1492,6 @@ set the current ASID is saved alongside the address in a TLB entry. Subsequent
 lookups for that address in the TLB cache only match if both the address and the
 saved ASID correspond to present values.
 
-% TODO: remember ttbcr; eventually describe MMU register configuration in greater
-% detail
-
-
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \chapter{Overview of the BCM2837}
 The BCM2837 is the System-on-Chip produced by Broadcom that is used for most
@@ -2231,7 +2266,7 @@ the design choices and code organization. This part will be most interesting for
 those with the intent of maintaining or modifying the work, or to study ARM
 bare metal development.
 
-The size of the project is comparatively small, only reaching about 4000 lines of 
+The size of the project is comparatively small, only reaching about 5000 lines of 
 code. The real weight of this work does not lie in the actual software that was
 written but in the idea and study of the environment, pioneering the possibility
 of developing a proof-of-concept OS on real hardware instead of an emulator.
@@ -2260,20 +2295,21 @@ The Assembler compoment was kept to a minimum for ease of understanding; from
 the moment the C stack is available there is no real reason not to jump into 
 C code (unless the goal was to exercise Assembly programming, which is not our case).
 
-Thus, there are only two Assembly source files: {\tt init.S} is the absolute first
-entry point and provides initialization for system registers, interrupt vectors, 
+Thus, there are only three Assembly source files: {\tt init.S} is the absolute first
+entry point and provides initialization for system registers, 
 bss section and multicore functionality; {\tt asmlib.S} contains utility functions
 that make heavy use of general and specific purpose registers that would have
-required inline Assembly instructions anyway if implemented in C.
+required inline Assembly instructions anyway if implemented in C; {\tt vectors.S}
+declares interrupt handlers.
 
 \subsection{Build Tools}
 Contrarily to the $\mu$MPS family of emulators, this work does not use the 
 Autotool suite of building tools (GNU Automake and Autoconf) to manage source 
 compilation and package installation.
-Not having a newly created graphical interface there are no library dependencies
+Not having a newly created graphical interface means there are no library dependencies
 such as Qt, weakening the need for strict dependency check. 
 This, together with a smaller overall codebase prompted the author to search 
-for a simpler and more modern build tool, and the final choice is Scons.
+for a simpler and more modern build tool, and the final choice fell on Scons.
 
 Scons has the advantage of being much more flexible and easy to use when compared
 to older tools. Instead of leaning on a brand new (and potentially cumbersome)
@@ -2282,7 +2318,7 @@ received and praised for its approachable syntax: Python.
 
 In fact, Scons can be assimilated to a Python library for declaring build dependency
 trees. Its philosophy is similar to Make but brings a much cleaner syntax and 
-user control over the process. 
+flexible user control over the process. 
 
 \subsection{Linker Script}
 The linker script is an essential piece when compiling for the Raspberry Pi 3. It has
@@ -2349,12 +2385,10 @@ lines are pending.
 
  \begin{figure}[h]
     \begin{center}
- \includegraphics[scale=0.8]{images/tesi6.png}
+ \includegraphics[scale=0.7]{images/tesi6.png}
  \caption[IRQ Switch]{Interrupt handling schematic}\label{fig:irq}
     \end{center}
  \end{figure}
-
- %TODO: fix everything
 
 Other exception handlers, like the synchronous exception handler, are even 
 simpler, reduced to passing control to the user defined routine if present.
@@ -2383,7 +2417,7 @@ level of user defined interrupts). To maintain this precaution and still allow
 user code running at \textbf{EL1} to be properly served when sending a command, the
 special mailbox used for emulated peripherals fires a fast interrupt request (FIQ)
 instead.
-Fast interrupts are kept obscured to the user and managed only internally (in fact,
+Fast interrupts are kept obfuscated to the user and managed only internally (in fact,
 for this single purpose). IRQs and FIQs are separated for historical reasons, so 
 the abstraction layer can disable the former and enable the latter.
 
@@ -2441,7 +2475,8 @@ however may notice how the memory transfer operation is carried on instantaneous
 and that there are comparatively big time gaps in kernel control when it happens,
 as depicted in figure \ref{fig:executionthread}.
 This is because the emulation layer takes place on the same execution thread of
-the kernel, forcing to share time and resources when the command is carried on.
+the kernel, forcing to share time and resources when the command is carried on 
+\footnote{It should be noted that this inconsistency is only true for the first core.}.
 
 Overall, this should not be a major concern for a novice approaching OS development.
 
@@ -2502,7 +2537,7 @@ bare metal programming for the BCM2837 and ARM processors in general.
 Notably, since disk and tape devices are ``plugged'' into MaldOS as files onto
 the microSD, a small FAT32 file system library was necessary over the EMMC controller
 integration.
-The system expects a master boot record signaling a first FAT32 partition. There
+The system expects a master boot record signaling a first FAT32 partition. There,
 root entries (directory navigation is not supported) are listed and searched for
 the necessary \textit{DISKn} and \textit{TAPEn} files. Since both those device
 classes have a fixed size the library does not support file growth or shrinking,
@@ -2515,7 +2550,7 @@ is only partially loaded in main memory as a cache of cluster pointers.
 Using the MMU can be considered a higher level of complexity in its own right.
 One of the improvements brought by $\mu$MPS2 over $\mu$MPS was the possibility 
 of having it disabled for the first phases of the project, since the real 
-MIPSEL architecture had the virtuam memory translation constantly active.
+MIPSEL architecture had the virtual memory translation constantly active.
 In truth, there is little reason in practice to turn off such a feature: a microprocessor
 is born to run an Operating System, and every Operating System worthy of its name
 virtualizes memory for its processes. A smoother learning curve is quickly 
@@ -2561,6 +2596,7 @@ The only other alternative would be to pretend to load the entire binary at that
 address by specifying it in the linker script, and then setting up the MMU at 
 boot, before even jumping to C code. For reasons already listed, this was not
 acceptable.
+\newpage
 
 \subsection{Design Choices}
 While constructing the virtual memory environment the author came across design 
@@ -2598,7 +2634,7 @@ After a thorough analysis, this should not come as a surprise. The hypervisor
 component that ARM refers to is for a complete Operating System to be taken advantage
 of in the context of multiple virtual guest OS hosting; while intuitively an 
 abstraction layer emulating multiple device classes and a simpler develoment 
-environment has many common points, it is also significantly different. Therefore,
+environment has many common points to such a scenario, it is also significantly different. Therefore,
 many configuration options offered by the hypervisor that could bring improvements to this
 work ultimately fail to fit into it. The following sections portray the most 
 notable ones.
@@ -2647,6 +2683,7 @@ option to trap several memory accesses, both read and write, or certain instruct
 This possibility was not found to be useful in the context of this work.
 
 \subsubsection{Partial Exception Routing and Virtual Exceptions}
+\label{hypervisor}
 In opposition to the \textbf{TGE} complete superseding of \textbf{EL1} by
 \textbf{EL2} there are also separate fields in \textbf{HCR\_EL2} that allow
 for single exception classes to be routed to a different level (\textbf{AMO}, 
@@ -2658,11 +2695,11 @@ Moreover, when the corresponding routing bit is enabled another field permits th
 hypervisor to set a virtual exception that lower levels will see pending and that
 could be used to more properly emulate $\mu$MPS2 devices.\\
 
-This situation is not perfect either. First, not all interrupt classes are subject
+Unfortunately this situation is not perfect either. First, not all interrupt classes are subject
 to this configuration, leaving out synchronous exceptions caused by instructions
 like {\tt SVC}, used by system calls. While it is still possible to implement
-the {\tt SYSCALL()} function as an {\tt HVC} call, the difference in exception
-management is somewhat disorienting.
+the {\tt SYSCALL()} function as an {\tt HVC} call (routed to the hypervisor at 
+\textbf{EL2}), the difference in exception management is somewhat disorienting.
 As for virtual interrupts, they still have to be taken and handled directly by 
 \textbf{EL1}. By committing to this choice the abstraction layer would find itself in an 
 uncomfortable position with overhead handlers for both \textbf{EL1} and \textbf{EL2}
@@ -2689,7 +2726,8 @@ unnecessary (if not implicitly forbidden). Students can use a series of function
 exposed by the abstraction layer to perform configuration and management.
 
 \section{ROM Functions}
-Strictly speaking, there is no Read Only Memory on the BCM2837. This section is 
+Strictly speaking, there is no Read Only Memory on the BCM2837 (or rather, not a
+freely accessible one). This section is 
 dubbed ``ROM Functions'' in reference to the precompiled routines provided as 
 object files by $\mu$UMPS2 and similar emulators.
 Those functions include:
@@ -3246,6 +3284,12 @@ one being {\tt 0x0}); this way breakpoints will work regardless of the MMU state
 \clearpage{\pagestyle{empty}\cleardoublepage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%per fare le conclusioni
 \chapter{Conclusions and Future Work}
+This chapter enumerates possible directions in which MaldOS could could grow. 
+As a general note improvemet is always possible; for example, the hypervisor road
+described in section \ref{hypervisor} has not been dismissed entirely. Other than
+that there are also more specific branches to be followed both in the near and
+distant future.
+
 \section{Extending Qemu}
 The recently added Raspberry Pi machine configuration for Qemu only supports a few
 capabilities of the original board: the two serial interfaces, the framebuffer
@@ -3316,7 +3360,7 @@ exploit and an higher highlight for an undergraduate (or even graduate) student.
 
 \section{Other Programming Languages}
 Traditionally, Operating System kernels are written in C with critical parts
-coded in Assembler. Some alternate higher level components using C-derived 
+coded in Assembler, with some alternative higher level components using C-derived 
 languages like C++ (Windows and Android) and Objective-C (IOS).
 In the introduction some notable exceptions were mentioned: the Ultibo project 
 \cite{ultibo} is a Raspberry Pi hardware abstraction layer written entirely in 
@@ -3355,10 +3399,10 @@ In the early years code for the GPU was released only in binary form as propriet
 software; only in 2012 Broadcom gave in and documented open source firmware for 
 graphical processing. To this day a small component of proprietary binaries is 
 still necessary to boot the Raspberry Pi (for example, {\tt bootcode.bin}), although
-there are timid attempts at reverse engineering that as well.\\
+there are timid attempts at reverse engineering that as well \cite{openfirmware}.\\
 
 If the Videocore IV was freely available for the developer like the ARM CPU, part
-(if not the entirety) of the abstraction layer that is implemented as 
+(if not the entirety) of the abstraction layer that is implemented as some kind of
 \textit{interrupt-in-the-middle} could be moved there. The interface to access
 abstraction capabilities would not be much more convenient for the user, 
 as the communication media would still be mailboxes; it would however provide
@@ -3421,11 +3465,38 @@ Overall, it would certainly be an extremely formative experience.
 \bibitem{guide} ARM Cortex-A Series Programmer's Guide for ARMv8-A, ARM, 2015.
 \bibitem{armarm} ARM Architectural Reference Manual ARMv8, for ARMv8-A Architecture Profile, ARM, 2017.
 \bibitem{a53} ARM Cortex-A53 MPCore Processor, ARM, 2016.
+\bibitem{openfirmware} Raspberry Pi Open Source VPU-side Bootloader, \url{https://github.com/christinaa/rpi-open-firmware}
 \end{thebibliography}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%non numera l'ultima pagina sinistra
 \clearpage{\pagestyle{empty}\cleardoublepage}
-\chapter*{Ringraziamenti}
+\chapter*{Acknowledgements}
 \thispagestyle{empty}
-Qui possiamo ringraziare il mondo intero!!!!!!!!!!\\
-Ovviamente solo se uno vuole, non \`e obbligatorio.
+\setlength{\parindent}{0cm}
+My thanks go to the many people that assisted and sustained me while preparing 
+my work.\\
+
+My friends, colleagues and parents who had to endure rambled concerns about
+my work for more than a year (especially Alessandro, that never failed 
+to remind me how unfounded and childish my anxiety was).\\
+
+My brother, who went through more than a hundred pages of mostly incomprehensible
+Computer Science jargon to proofread my dissertation.\\
+
+My grandparents, who attentively listened every time I was describing the current
+obstacles I was facing, always trying their best to follow a topic
+so obscure to them.\\
+
+My employers, for giving me the opportunity to organize work and study at my own
+pace and with no limitations.\\
+
+All the ever-helpful users of the Raspberry Pi bare metal forum for promptly 
+answering all of my doubts and uncertainties about ARM development and the 
+BCM2837 board.\\
+
+Last but most certainly not least important I am grateful to my advisor, professor
+Renzo Davoli, for granting me trust and guidance in developing this project, with
+the intent of keeping it alive if it turned out to be academically sound and
+useful.
+
+
 \end{document}
