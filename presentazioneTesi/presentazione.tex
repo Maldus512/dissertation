@@ -11,17 +11,17 @@
 
 \begin{document}
 
-\title[MaldOS] % (optional, only for long titles)
+\title[MaldOS]
 {{\huge\textsc{MaldOS}:} \\
 a Moderately Abstracted Layer for Developing Operating Systems}
-\author[Mattia Maldini] % (optional, for multiple authors)
+\author[Mattia Maldini]
 {Mattia Maldini\\[3mm]Relatore: Renzo Davoli\\[3mm]}
 
-\institute[Università di Bologna] % (optional)
+\institute[Università di Bologna]
 {
   Università di Bologna
 }
-\date[Laurea 2019] % (optional)
+\date[Laurea 2019]
 {Sessione di laurea 14 marzo 2019}
 \subject{Informatica}
 
@@ -30,14 +30,15 @@ a Moderately Abstracted Layer for Developing Operating Systems}
 \begin{frame}[fragile]
     Structuring an Operating Systems course can be a thorny task. \\
     \bigskip
-    Topics like
-    scheduling, parallel programming, virtual memory and context switching are 
+    Topics like scheduling, parallel programming, virtual memory and context switching are 
     hard to grasp via a purely abstract approach, and developing a concrete 
     example is inherently non trivial.\\
     \bigskip
-    A previous solution to this issue was the $\mu$MPS family of emulators; this
-    work proposes a slight shift in the form of an abstraction layer allowing for
-    easier development on real hardware.
+    Examples might be implemented as user space programs, but they would lose
+    some details that deeply characterize kernel development. On the other end
+    one could work, bare metal, on a real processor, but this entails many 
+     nuances unnecessary for students.
+
     \begin{comment}
         I sistemi operativi sono un argomento particolarmente spinoso nel contesto
         dell'insegnamento. I concetti che vengono coperti possono essere facilmente
@@ -45,13 +46,41 @@ a Moderately Abstracted Layer for Developing Operating Systems}
         interiorizzare senza un approccio pratico; approccio pratico che, considerata
         l'inerente complessita' dell'argomento, e' a sua volta complesso da
         applicare.
-        Una soluzione seguita nel corso degli anni dal professor Davoli si appoggia
-        a uMPS e simili, una famiglia di emulatori ad hoc per architettura MIPS 
-        (e ARM).
+
+        Idealmente gli studenti dovrebbero implementare questi concetti; non e'
+        immediato decidere con che grado di completezza e con quali strumenti a
+        disposizione; quanto l'ambiente in cui lavorano debba essere semplificato
+        e quali strumenti debbano essere forniti.
+        Un esempio e' tanto piu' interessante quanto piu' e' aderente alla realta',
+        ma la realta' porta con se' complicazioni estranee al programma del corso.
+        E' necessario trovare un equilibrio
+
+    \end{comment}
+\end{frame}
+
+\begin{frame}[fragile]
+    A previous solution to this issue was the $\mu$MPS family of emulators; this
+    work proposes a slight shift in the form of an abstraction layer allowing for
+    easier development on real hardware.
+    \bigskip
+
+    \begin{figure}[b]
+    \includegraphics[scale=0.54]{scale.png}
+    \end{figure}
+
+    \begin{comment}
+        Esiste una ricca letteratura sull'argomento, ma questo lavoro parte dall'
+        approccio di uMPS, un emulatore ad-hoc che permette di sviluppare un
+        sistema operativo per processori MIPSEL, soluzione applicata dal professor
+        Davoli nel suo corso di Sistemi Operativi. 
         MaldOS e' una variazione sul tema; e' un acronimo per Moderately
         Abstracted Layer for Developing Operating Systems, ovvero un layer
         che renda piu' semplice (ma non troppo) l'approccio all'hardware di
         una architettura reale.
+
+        Sostanzialmente, si tratta di un tentativo di spostare il lavoro verso
+        una maggiore concretezza, senza pero' perdere terreno in termini di chiarezza
+        e coerenza degli argomenti trattati.
     \end{comment}
 \end{frame}
 
@@ -69,7 +98,7 @@ a Moderately Abstracted Layer for Developing Operating Systems}
     \begin{comment}
         uMPS riproduce fedelmente un'architettura reale, offrendo quindi un
         esempio didatticamente interessante, rimuovendo i dettagli che non
-        sono interessanti per lo studio dei sistemi operativi. Per esempio, 
+        sono rilevanti per lo studio dei sistemi operativi. Per esempio, 
         l'interazione con le periferiche tramite registri e' considerata parte
         integrante dello sviluppo di un sistema operativo; l'elevata complessita'
         dei protocolli di controllo di suddette periferiche e' invece un ostacolo
@@ -106,12 +135,18 @@ a Moderately Abstracted Layer for Developing Operating Systems}
         una board educativa largamente diffusa; in questo modo gli studenti possono
         avere la soddisfazione di vedere il proprio lavoro eseguito su una macchina
         reale.
+        Essendo pensato per un target reale l'intero processo di sviluppo dovrebbe
+        risultare meno astratto; per esempio, su uMPS 
+        e' necessario un ulteriore passaggio, dopo la compilazione del kernel,
+        per adattare il binario all'emulatore. Dopo aver linkato il proprio codice
+        con MaldOS il risultato e' invece immediatamente pronto per essere caricato
+        su un Raspberry Pi.
         L'hardware da solo sarebbe un ambiente di sviluppo inclemente; serve comunque
         un emulatore. Trattandosi di un dispositivo diffuso ci si puo' avvalere 
         di Qemu, che ha recentemente supportato anche il modello 3. Lavorando su
         un emulatore general purpose si ottengono tutti i benefici del caso, tra
-        cui il pieno supporto di GDB.
-        ARMv8 e' una architettura moderna e 
+        cui il pieno supporto di GDB (tra cui anche l'esecuzione step-by-step).
+        Infine ARMv8 e' una architettura moderna rispetto a MIPSEL.
     \end{comment}
 \end{frame}
 
@@ -131,7 +166,13 @@ a Moderately Abstracted Layer for Developing Operating Systems}
         gli studenti si troveranno a interagire con uno spazio di memoria nudo
         e senza protezioni dove definire gli interrupt handler, ma gli verra'
         risparmiato lo sforzo di doverli creare in linguaggio Assembler.
-        In generale il layer di astrazione si occupa di quattro aspetti.
+        Alcune periferiche sono troppo complesse e l'interazione deve essere semplificata,
+        ma mai fornendo direttamente funzioni di alto livello; i comandi devono
+        sempre essere indicati tramite registri, per non perdere la percezione 
+        di avere a che fare con un processore.
+        Come nell'immagine quindi alcune parti dell'hardware sono lasciate esposte
+        e direttamente approcciabili. Altre, invece, vengono controllate passando
+        attraverso il layer di MaldOS, che per questo e' "moderatamente astratto".
     \end{comment}
 \end{frame}
 
