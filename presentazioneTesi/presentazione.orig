@@ -41,22 +41,24 @@ a Moderately Abstracted Layer for Developing Operating Systems}
 
     \begin{comment}
         Quello dei sistemi operativi e' un argomento particolarmente spinoso 
-        in un contesto di insegnamento. I concetti che vengono coperti 
-        (scheduling, programmazione parallela, memoria virtuale...) 
-        possono essere facilmente compresi a un livello superficiale e intuitivo,
-        ma sono difficili da interiorizzare senza un approccio pratico; 
+        in un contesto
+        di insegnamento. I concetti che vengono coperti (scheduling, programmazione
+        parallela, memoria virtuale...) possono essere compresi intuitivamente ma
+         sono difficili da interiorizzare senza un approccio pratico; 
+         approccio pratico che, considerata l'inerente complessita' 
+         dell'argomento, e' a sua volta complesso da applicare.
 
-        Tuttavia, volendo strutturare un esempio pratico per gli studenti, non e'
+        volendo strutturare un esempio da implementare, non e'
         immediato decidere quali argomenti debbano essere coperti,
-         con che grado di completezza, con quali strumenti a
-        disposizione, o anche soltanto su quale architettura lavorare.
+         con che grado di completezza e con quali strumenti a
+        disposizione, quanto l'ambiente in cui lavorano debba essere semplificato.
 
         In generale, un esempio e' tanto piu' interessante quanto piu' e' 
         aderente alla realta',
         ma la realta' dei sistemi operativi porta con se' complicazioni che
-        vanno molto oltre alle competenze che ci si aspetta dagli studenti.
+        vanno molto oltre alle competenze che ci si aspetta dagli studenti
 
-        E' quindi necessario trovare un equilibrio tra concretezza e approcciabilita'
+        E' necessario trovare un equilibrio tra concretezza e approcciabilita'
         del progetto.
     \end{comment}
 \end{frame}
@@ -82,7 +84,7 @@ a Moderately Abstracted Layer for Developing Operating Systems}
         Abstracted Layer for Developing Operating Systems, ovvero un layer
         che renda piu' semplice (ma non troppo) l'approccio all'hardware di
         un dispositivo, il Raspberry Pi 3, con lo scopo di sviluppare un 
-        sistema operativo.
+        sistema operativo - opposto all'emulatore di uMPS.
         
         Sostanzialmente, si tratta di un tentativo di spostare il lavoro verso
         un approccio ancora piu' pratico, senza pero' perdere terreno in 
@@ -98,7 +100,7 @@ a Moderately Abstracted Layer for Developing Operating Systems}
     However
     \begin{itemize}
         \item it is still abstract work, as the resulting OS will never run on a real device
-        \item $\mu$MPS is an ad-hoc emulator; general purpose software would be preferable
+        \item $\mu$MPS is an ad-hoc emulator
         \item Its debugging facilities lack step-by-step execution of C code
         \item MIPS is a dated architecture
     \end{itemize}
@@ -122,7 +124,8 @@ a Moderately Abstracted Layer for Developing Operating Systems}
         sul codice C, una feature che semplificherebbe significativamente il
         lavoro degli studenti.
 
-        Infine, MIPS e' un'architettura ormai datata.
+        Infine, MIPS e' un'architettura ormai datata, e per gli studenti puo'
+        essere piu' interessante studiare ambienti piu' moderni e diffusi, come ARM.
     \end{comment}
 \end{frame}
 
@@ -143,8 +146,7 @@ a Moderately Abstracted Layer for Developing Operating Systems}
         piu' moderna e diffusa rispetto a MIPS.
 
         Oltre a usare una architettura reale, si appoggia anche a 
-        un dispositivo esistente (il Raspberry Pi 3),
-         ottenendo una maggiore aderenza al
+        un dispositivo esistente, raggiungendo una maggiore aderenza al
          processo di sviluppo di un sistema operativo e dando agli studenti
         la soddisfazione di vedere il proprio lavoro eseguito su un computer 
         a tutti gli effetti.
@@ -157,9 +159,9 @@ a Moderately Abstracted Layer for Developing Operating Systems}
         Lavorando su qemu si ottengono tutti i benefici 
         del caso, tra cui il pieno supporto di GDB; essendo software general 
         purpose viene a mancare l'ispezione dettagliata dei registri di
-        sistema che offre uMPS (che comunque potrebbe essere aggiunta come
-        front end indipendente), ma offre degli strumenti piu' completi tra
-        i quali anche l'esecuzione step-by-step su codice C.
+        sistema che offre uMPS , ma e' in generale un debugger 
+        piu' sofisticato e completo (che include anche l'esecuzione 
+        step-by-step di codice C).
     \end{comment}
 \end{frame}
 
@@ -175,21 +177,52 @@ a Moderately Abstracted Layer for Developing Operating Systems}
         Questi sono i vantaggi che si cerca di ottenere.
 
         Come gia' detto, l'astrazione deve essere soltanto parziale; alcuni tratti
-        dell'hardware sono soltanto un fastidio, ma altri sono considerati 
-        parte integrante dell'esperienza di sviluppo di un sistema operativo.
-        
-        Per esempio, alcune periferiche sono troppo 
-        complesse e l'interazione deve essere modificata emulando un set 
-        di registri piu' semplice; e' il caso del lettore di schede SD.
-        Altre invece, come le periferiche UART a caratteri, hanno gia' un'interfaccia
-        sufficientemente approcciabile e possono essere usate senza intermediari.
+        dell'hardware, del "bare metal development" sono considerati parte integrante
+        dell'esperienza; altri sono soltanto un fastidio. 
+        Seguendo questa filosofia, per esempio,
+        Alcune periferiche sono troppo complesse e l'interazione deve essere 
+        modificata emulando un set di registri piu' semplice; e' il caso
+        del lettore di schede SD.
+        Altre invece, come le interfacce UART a caratteri, hanno gia' un'interfaccia
+        sufficientemente approcciabile e possono essere usate senza itermediari.
 
         Come nell'immagine quindi alcune parti dell'hardware sono lasciate 
         direttamente esposte ; altre, invece, vengono controllate avendo
-         MaldOS come intercessore; per questo il layer e' solo 
-         "moderatamente astratto".
+        le routine di MaldOS come intermediario; 
+        per questo il layer e' solo "moderatamente astratto".
     \end{comment}
 \end{frame}
+
+\begin{comment}
+\begin{frame}[fragile]
+    \frametitle{Initialization}
+    \begin{itemize}
+        \item A proper linker script is setup beforehand
+        \item Move to the correct level of execution
+        \item Prepare memory structure (stack pointers and such)
+        \item Boot all four kernels and park three
+        \item Prepare the C environment (zero bss section)
+        \item Configure and initialize all real devices (UART, screen, SD)
+    \end{itemize}
+
+    \begin{comment}
+        Il primo e' l'inizializzazione. Prima ancora di 
+        eseguire il programma e' necessario organizzare adeguatamente la memoria
+        tramite un linker script che posizioni il kernel a un certo indirizzo e
+        ponga le basi per l'esecuzione.
+        Le prime operazioni riguardano la configurazione dei registri di sistema
+        e lo spostamento al livello di esecuzione corretto; dopodiche' bisogna
+        preparare stack pointer e interrupt handler per i livelli di esecuzione
+        interessati. Inizialmente soltanto uno dei quattro core e' attivo: gli
+        altri tre devono essere svegliati e messi in pausa, pronti per lavorare.
+        Fino a questo punto non c'e' un ambiente C completo, e si deve lavorare
+        in Assembler; da qui si inizializza
+        la sezione .bss delle variabili globali e si passa il controllo a una
+        routine C che passa a configurare tutti i dispositivi.
+        Solo dopo tutte queste preparazioni si puo' saltare al codice fornito
+        dallo studente, che quindi vede soltanto la classica funzione 'main'
+\end{frame}
+\end{comment}
 
 \begin{frame}[fragile]
     \frametitle{Interrupt Management}
@@ -200,29 +233,29 @@ a Moderately Abstracted Layer for Developing Operating Systems}
     \begin{comment}
         MaldOS viene compilato e linkato staticamente insieme al codice fornito
         dallo studente.
-
         Riassumendone molto il funzionamento,
         dopo aver inizializzato il sistema passa il controllo al kernel
-        dello studente e lo riprende nel caso di interrupt.
-        
-        ARMv8 specifica 4 livelli di esecuzione; di questi, il quarto e' relativo
-        a controlli di sicurezza e non e' contemplato in questo lavoro;
-         il primo, EL0, e' il livello di esecuzione non privilegiato dei processi
-         utente; nel secondo, EL1, vive il kernel del sistema operativo;
+        dello studente e lo riprente nel caso di interrupt.
+        ARMv8 specifica 4 livelli di esecuzione; di questi, il terzo e' relativo
+        a controlli di sicurezza e non e' interessante; il primo 
+        Gli studenti che sviluppano sul layer di astrazione sono interessati soltanto
+        ai primi due, il livello non privilegiato per i processi (EL0) e quello
+        elevato per il kernel(EL1).
         Il livello EL2 e' pensato per ospitare un hypervisor, ovvero un'entita' 
         che gestisca altri sistemi operativi virtualizzati. 
-
         Il layer di astrazione vive a cavallo tra EL2 ed EL1; questo perche' 
         le eccezioni in ARMv8 sono molto eterogenee, ed e' stato usato il 
         livello di esecuzione reputato piu' conveniente caso per caso. A volte 
         l'handler parte da EL2 per poi scendere a EL1, altre rimane sempre a EL1.
 
-        mentre e' in esecuzione, il layer di astrazione ha due compiti principali:
+        durante il suo tempo di esecuzione, il layer di astrazione ha due compiti
+        principali:
 
         da una parte si occupa di dare al kernel "ospite" una
         gestione omogenea degli interrupt, partendo sempre da EL1 e 
         impacchettando in locazioni di memoria predefinite le informazioni
         relative all'avvenuto context switch.
+
     \end{comment}
 \end{frame}
 
@@ -268,23 +301,70 @@ a Moderately Abstracted Layer for Developing Operating Systems}
 
     \begin{comment}
         Dall'altra gestisce l'emulazione di alcuni dispositivi.
-
-        sulla destra e' elencata parte dei registri relativi al lettore
-        di schede SD del raspberry pi: ce ne sono quasi trenta, 
-        disposti in ordine sparso e con funzioni eterogenee. 
-        Per semplificare l'accesso MaldOS legge il contenuto 
-        della memoria e considera alcuni file speciali come 
-        memorie di massa a loro volta. 
-        
-        L'interfaccia fornita per questi dispositivi
+        sulla destra sono elencati alcuni dei registri per il controllo del 
+        dispositivo: ce ne sono quasi trenta, disposti in ordine sparso e
+        con funzioni eterogenee. Per semplificare l'accesso MaldOS legge il
+        contenuto della memoria e considera alcuni file speciali come 
+        memorie di massa a loro volta. L'interfaccia fornita per questi dispositivi
         e' sulla sinistra, composta da soli 5 registri con funzioni intuitive
         (seguendo l'esempio di uMPS).
-        Non essendoci dei veri registri per questi dispositivi emulati 
-        il passaggio dei comandi avviene tramite mailbox,
-        un meccanismo di inter process communication  gia' presente nel 
-        sistema originale e che quindi si inserisce in maniera molto 
-        naturale nel complesso.
+        Non essendo veri registri il passaggio dei comandi avviene tramite 
+        il meccanismo delle mailbox, gia' presente nel sistema originale e che
+        quindi si inserisce in maniera molto naturale nel complesso.
     \end{comment}
 \end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Virtual Memory}
+    \vspace{-2cm}
+    \begin{wrapfigure}{r}{0.65\textwidth}
+        \includegraphics[scale=0.35]{ttbr.png}
+    \end{wrapfigure}
+    The ARMv8 MMU is remarkably flexible, so the virtual memory configuration is left
+    mostly untouched.
+    Students are assisted by changing page tables every time the kernel context
+    switched in.
+
+    \begin{comment}
+        Quarto e ultimo aspetto, la memoria virtuale. Posto che la gestione di una
+        MMU e' considerato uno sforzo inerentemente complesso, l'interfacciamento
+        con il sistema rimane sostanzialmente intoccato.
+        L'unica difficolta' sta nella configurazione iniziale: in generale, la
+        memoria virtuale e' una funzionalita' che viene mantenuta sempre attiva;
+        uno dei problemi iniziali dell'architettura MIPS era proprio l'impossibilita'
+        di "spegnere" la MMU.
+        Essendo in parte vicino al mondo embedded, l'architettura ARM permette
+        di disattivare la traduzione di memoria; tuttavia rimane un meccanismo
+        fortemente integrato nel sistema: esistono due registri, ttbr0 e ttbr1,
+        che puntano a due tabelle delle pagine diverse; la discriminante per quale
+        usare non e' pero' il livello di esecuzione (come sarebbe conveniente), 
+        ma i due byte piu' significativi dell'indirizzo. Per usare una page table 
+        diversa quindi il kernel deve apparire come caricato a un indirizzo di
+        memoria inesistente, il che e' inconciliabile con una attivazione tardiva
+        della MMU. Per risolvere questo problema gli handler degli interrupt scambiano
+        i due registri TTBR0 e TTBR1 prima di passare il controllo al kernel,
+        ottenendo l'impressione di page table legate al livello di esecuzione.
+    \end{comment}
+\end{frame}
+
+\begin{comment}
+\begin{frame}[plain,fragile]
+    \frametitle{Qemu and Debugging}
+    \makebox[\linewidth]{
+        \includegraphics[width=12.5cm,height=8cm]{gdbgui.png}
+    }
+
+    \begin{comment}
+        Mentre il kernel e' in esecuzione su Qemu puo' essere debuggato usando
+        GDB. Non viene fornita un'interfaccia specializzata per il progetto, ma
+        nel caso sarebbe relativamente semplice implementarne una: GDB mette a
+        disposizione un interprete di comandi "macchina" proprio per
+        poter costruire interfacce grafiche sofisticate. Per la durata di questo
+        progetto e' stata usata GDBGUI, un tool Python che agisce da webserver
+        e permette di debuggare tramite browser. Si puo' eseguire il codice passo
+        per passo, ispezionare variabili, stabilire breakpoint, leggere la memoria
+        e visualizzare separatamente i quattro core del processore.
+\end{frame}
+\end{comment}
 
 \end{document}
